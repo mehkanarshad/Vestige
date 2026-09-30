@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  passwordHash   String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions       Session[]
+  styleProfile   StyleProfile?
+  styleEvolution StyleEvolution[]
+}
+
+model Session {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  // Step 2 — skin analysis
+  photoUrl        String?
+  skinAnalysisRaw String?    // JSON string — raw YouCam response
+  skinSummary     String?    // JSON string — our structured extraction
+  // Step 3 — intention
+  intention       String?
+  // Step 4 — AI recommendations
+  recommendations String?    // JSON string — array of OutfitRecommendation
+  // Step 5 — try-on
+  selectedOutfit  String?    // JSON string — chosen outfit
+  tryOnImageUrl   String?
+  // Step tracking
+  completedStep   Int        @default(0)
+  feedback        Feedback[]
+}
+
+model Feedback {
+  id         String   @id @default(cuid())
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type       String   // "liked" | "rejected" | "adjusted"
+  detail     String?
+  outfitId   String?
+  outfit     String?  // JSON string — outfit snapshot
+  createdAt  DateTime @default(now())
+}
+
+model StyleProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skinTraits      String?  // JSON string
+  preferredStyles String?  // JSON string — string[]
+  avoidedStyles   String?  // JSON string — string[]
+  intentions      String?  // JSON string — Record<string, number>
+  colorPalette    String?  // JSON string — string[]
+  styleSummary    String?  // one-sentence AI-written style summary
+  sessionCount    Int      @default(0)
+  updatedAt       DateTime @updatedAt
+}
+
+model StyleEvolution {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshotAt DateTime @default(now())
+  summary    String
+  traits     String   // JSON string — snapshot of StyleProfile
+}

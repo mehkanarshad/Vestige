@@ -1,0 +1,588 @@
+/*
+  Font loading — browser-side CSS import (not next/font/google).
+  This resolves at runtime in the browser, keeping next build offline-safe.
+  Playfair Display: editorial serif (400, 500, 700, 900 + italics)
+  DM Sans: UI grotesque (300, 400, 500, 600)
+*/
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS font variables ────────────────────────────────────────────────────── */
+:root {
+  --font-serif: "Playfair Display";
+  --font-sans:  "DM Sans";
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   VESTIGE — Design System
+   
+   Palette rationale:
+   · Warm neutrals (cream → charcoal) are the canvas. The photography provides colour.
+   · One accent: #B8924A (a restrained warm gold — not bright, not gradient)
+   · Primary interactive action: dark charcoal #1A1714
+   · Gold used only for: the primary hero CTA, active state dots, trace indicators
+   
+   Type rationale:
+   · Playfair Display — editorial serif for all display and heading copy
+     900: hero display  |  700: section h2  |  500: h3  |  400: lead/italic
+   · DM Sans — UI grotesque for all chrome
+     600: labels/caps  |  500: medium  |  400: body  |  300: light body
+   
+   Spacing:
+   · Generous whitespace is a feature, not waste.
+   · Sections breathe. Key content gets room.
+────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Base reset & tokens ──────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Palette */
+    --c-cream:     #F8F4EE;
+    --c-parchment: #EFE8DC;
+    --c-sand:      #E0D3C0;
+    --c-stone:     #B0A090;
+    --c-bark:      #857060;
+    --c-umber:     #58463A;
+    --c-charcoal:  #2A1F18;
+    --c-ink:       #1A1714;
+    --c-accent:    #B8924A;
+    --c-accent-lt: #D4AF72;
+    --c-sage:      #7A8C76;
+    --c-white:     #FEFCF9;
+
+    /* Spacing rhythm */
+    --space-section: clamp(4.5rem, 8vw, 7rem);
+    --space-block:   clamp(2.5rem, 4vw, 4rem);
+
+    /* Border */
+    --border-color: #E0D3C0;
+    --border-subtle: rgba(176, 160, 144, 0.35);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  body {
+    background-color: var(--c-cream);
+    color: var(--c-ink);
+    font-family: var(--font-sans), "DM Sans", system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.65;
+    font-weight: 400;
+  }
+
+  ::selection {
+    background-color: rgba(184, 146, 74, 0.18);
+    color: var(--c-ink);
+  }
+
+  /* Minimal scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--c-stone); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--c-bark); }
+
+  /* Focus ring — accessible but unobtrusive */
+  :focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+}
+
+/* ── Tailwind compat CSS variables ─────────────────────────────────────────── */
+@layer base {
+  :root {
+    --background: 36 26% 95%;
+    --foreground: 20 18% 9%;
+    --border: 34 18% 80%;
+    --input: 34 16% 87%;
+    --ring: 34 32% 49%;
+    --radius: 2px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   
+   The type scale has three distinct registers:
+   1. Display (serif, Playfair) — editorial statements
+   2. Body (sans, DM Sans) — readable prose and UI
+   3. Label (sans, DM Sans, all-caps tracking) — metadata and categories
+══════════════════════════════════════════════════════════════════════════════ */
+@layer components {
+
+  /* ── Display / Heading — Playfair Display ─────────────────────────────── */
+
+  /* Hero-scale: landing page, major section anchors */
+  .t-hero {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: clamp(3.25rem, 7vw, 5.75rem);
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    color: var(--c-ink);
+  }
+
+  /* Page-level h1 */
+  .t-display-xl {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: clamp(2.5rem, 5vw, 4.25rem);
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    color: var(--c-ink);
+  }
+
+  /* Section-level h2 */
+  .t-display-lg {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: clamp(1.875rem, 3.5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--c-ink);
+  }
+
+  /* Sub-section h3, card headings */
+  .t-display-md {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: clamp(1.375rem, 2.25vw, 2rem);
+    font-weight: 500;
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+    color: var(--c-ink);
+  }
+
+  /* Small headings, callouts */
+  .t-display-sm {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: clamp(1.125rem, 1.75vw, 1.5rem);
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    color: var(--c-ink);
+  }
+
+  /* Editorial italic — style summaries, pull-quotes */
+  .t-editorial {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-size: clamp(1.125rem, 1.75vw, 1.375rem);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.55;
+    letter-spacing: 0.005em;
+    color: var(--c-bark);
+  }
+
+  /* ── Body — DM Sans ────────────────────────────────────────────────────── */
+
+  .t-body-lg {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 1.0625rem;
+    font-weight: 300;
+    line-height: 1.75;
+    color: var(--c-umber);
+  }
+
+  .t-body-md {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--c-umber);
+  }
+
+  .t-body-sm {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--c-bark);
+  }
+
+  /* ── Labels / Caps ─────────────────────────────────────────────────────── */
+
+  /* Category labels, nav labels, section identifiers */
+  .t-label {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--c-stone);
+  }
+
+  /* Smaller metadata, timestamps */
+  .t-label-sm {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.625rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--c-stone);
+  }
+
+  /* ── Legacy class aliases (keeps existing pages working) ────────────────── */
+  .display-xl   { @apply t-display-xl; }
+  .display-lg   { @apply t-display-lg; }
+  .display-md   { @apply t-display-md; }
+  .body-lg      { @apply t-body-lg; }
+  .caption      { @apply t-label; }
+  .t-display-2xl { @apply t-hero; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT CONTAINERS
+══════════════════════════════════════════════════════════════════════════════ */
+
+  .container-xl  { @apply mx-auto max-w-[1320px] px-5 sm:px-8 lg:px-14; }
+  .container-lg  { @apply mx-auto max-w-[1024px] px-5 sm:px-8; }
+  .container-md  { @apply mx-auto max-w-[720px]  px-5 sm:px-8; }
+  .container-sm  { @apply mx-auto max-w-[520px]  px-5; }
+
+  /* Legacy */
+  .vestige-container { @apply container-lg; }
+  .vestige-section   { padding-top: var(--space-section); padding-bottom: var(--space-section); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUTTONS
+   
+   Hierarchy:
+   · btn-primary  — dark charcoal, used for most CTAs
+   · btn-accent   — warm gold, the ONE highest-priority action per page
+   · btn-outline  — bordered, secondary actions
+   · btn-ghost    — no border, tertiary / in-context links
+══════════════════════════════════════════════════════════════════════════════ */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Primary — dark, confident, used broadly */
+  .btn-primary {
+    @apply btn;
+    background: var(--c-ink);
+    color: var(--c-cream);
+    padding: 0.8125rem 1.75rem;
+    border-radius: 1px;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--c-charcoal); transform: translateY(-1px); }
+  .btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+  /* Accent gold — the single hero CTA on any given page */
+  .btn-accent {
+    @apply btn;
+    background: var(--c-accent);
+    color: var(--c-ink);
+    padding: 0.8125rem 2rem;
+    border-radius: 1px;
+    font-weight: 600;
+  }
+  .btn-accent:hover:not(:disabled) { background: var(--c-accent-lt); transform: translateY(-1px); }
+  .btn-accent:active:not(:disabled) { transform: translateY(0); }
+
+  /* Outline — borders visible, no fill */
+  .btn-outline {
+    @apply btn;
+    background: transparent;
+    color: var(--c-charcoal);
+    padding: 0.8125rem 1.75rem;
+    border-radius: 1px;
+    border: 1px solid var(--c-stone);
+  }
+  .btn-outline:hover:not(:disabled) { border-color: var(--c-charcoal); background: rgba(224,211,192,0.25); }
+
+  /* Ghost — minimal presence */
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    color: var(--c-bark);
+    padding: 0.5rem 0.875rem;
+    border-radius: 1px;
+  }
+  .btn-ghost:hover:not(:disabled) { color: var(--c-ink); }
+
+  /* Size modifiers */
+  .btn-sm { padding: 0.5rem 1.125rem !important; font-size: 0.75rem !important; }
+  .btn-lg { padding: 1rem 2.25rem   !important; font-size: 0.9375rem !important; }
+  .btn-xl { padding: 1.125rem 2.75rem !important; font-size: 1rem !important; font-weight: 600 !important; }
+
+  /* Legacy aliases — keeps old pages building */
+  .btn-secondary { @apply btn-outline; }
+  .btn-gold      { @apply btn-accent; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════════════════════════════ */
+
+  .nav-link {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--c-bark);
+    text-decoration: none;
+    transition: color 0.15s ease, opacity 0.15s ease;
+    letter-spacing: 0.01em;
+  }
+  .nav-link:hover  { color: var(--c-ink); }
+  .nav-link.active { color: var(--c-ink); font-weight: 500; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SURFACES
+══════════════════════════════════════════════════════════════════════════════ */
+
+  /* Frosted glass — use sparingly on interactive overlays */
+  .glass {
+    background: rgba(248, 244, 238, 0.82);
+    backdrop-filter: blur(20px) saturate(1.15);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    border: 1px solid rgba(224, 211, 192, 0.55);
+  }
+
+  .glass-dark {
+    background: rgba(42, 31, 24, 0.88);
+    backdrop-filter: blur(24px) saturate(1.1);
+    -webkit-backdrop-filter: blur(24px) saturate(1.1);
+    border: 1px solid rgba(184, 146, 74, 0.12);
+  }
+
+  /* Flat card — used only where grouping is genuinely needed */
+  .card-base {
+    background: var(--c-white);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    padding: 1.5rem;
+  }
+
+  .card-elevated {
+    background: var(--c-white);
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(26,23,20,0.06), 0 8px 24px rgba(26,23,20,0.04);
+  }
+
+  /* Legacy */
+  .vestige-card { @apply card-base; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORM ELEMENTS
+══════════════════════════════════════════════════════════════════════════════ */
+
+  .vestige-input {
+    width: 100%;
+    background: rgba(254, 252, 249, 0.9);
+    border: 1px solid var(--border-color);
+    border-radius: 1px;
+    padding: 0.8125rem 1rem;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    color: var(--c-ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+  }
+  .vestige-input::placeholder { color: var(--c-stone); }
+  .vestige-input:focus {
+    outline: none;
+    border-color: var(--c-bark);
+    box-shadow: 0 0 0 3px rgba(133, 112, 96, 0.1);
+  }
+
+  .field-label {
+    display: block;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-bark);
+    margin-bottom: 0.375rem;
+  }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIVIDERS
+══════════════════════════════════════════════════════════════════════════════ */
+
+  /* Fades in from edges — editorial section separator */
+  .divider {
+    display: block;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--border-color) 15%,
+      var(--border-color) 85%,
+      transparent 100%
+    );
+    border: none;
+  }
+
+  .divider-strong {
+    display: block;
+    height: 1px;
+    background: var(--border-color);
+    border: none;
+  }
+
+  /* Accent marker — short, gold, deliberate. Use max 1–2× per page. */
+  .accent-mark {
+    display: block;
+    width: 1.75rem;
+    height: 1px;
+    background: var(--c-accent);
+  }
+
+  /* Legacy */
+  .gold-line { @apply accent-mark; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SESSION WIZARD STEP INDICATOR
+══════════════════════════════════════════════════════════════════════════════ */
+
+  .step-dot         { height: 1.5px; border-radius: 9999px; transition: all 0.3s ease; }
+  .step-dot-active  { background: var(--c-ink); width: 2rem; }
+  .step-dot-done    { background: var(--c-stone); width: 1rem; }
+  .step-dot-pending { background: var(--c-sand); width: 1rem; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKELETON / SHIMMER
+══════════════════════════════════════════════════════════════════════════════ */
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--c-sand) 25%,
+      var(--c-parchment) 50%,
+      var(--c-sand) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+    border-radius: 1px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KEYFRAMES
+══════════════════════════════════════════════════════════════════════════════ */
+@layer base {
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  @keyframes fade-up {
+    0%   { opacity: 0; transform: translateY(18px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes scale-in {
+    0%   { opacity: 0; transform: scale(0.97); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slide-right {
+    0%   { transform: scaleX(0); transform-origin: left; }
+    100% { transform: scaleX(1); transform-origin: left; }
+  }
+  @keyframes trace-in {
+    /* Outfit/recommendation entering viewport */
+    0%   { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATION UTILITIES
+══════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  .animate-fade-up        { animation: fade-up  0.55s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-fade-up-delay  { animation: fade-up  0.55s 0.12s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-fade-up-delay2 { animation: fade-up  0.55s 0.24s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-fade-up-delay3 { animation: fade-up  0.55s 0.36s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-fade-in        { animation: fade-in  0.4s ease both; }
+  .animate-scale-in       { animation: scale-in 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-trace-in       { animation: trace-in 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-shimmer        { animation: shimmer  2.2s linear infinite; }
+
+  /* Stagger helpers for lists */
+  .stagger-1 { animation-delay:  0.06s; }
+  .stagger-2 { animation-delay:  0.12s; }
+  .stagger-3 { animation-delay:  0.18s; }
+  .stagger-4 { animation-delay:  0.24s; }
+  .stagger-5 { animation-delay:  0.30s; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT & SPACING UTILITIES
+══════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  /* Fluid section vertical rhythm */
+  .py-section   { padding-top: var(--space-section); padding-bottom: var(--space-section); }
+  .pt-section   { padding-top: var(--space-section); }
+  .pb-section   { padding-bottom: var(--space-section); }
+
+  /* Horizontal fluid padding (responsive gutters) */
+  .px-fluid     { padding-left: clamp(1.25rem, 4vw, 3.5rem); padding-right: clamp(1.25rem, 4vw, 3.5rem); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY UTILITIES
+══════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  .text-balance  { text-wrap: balance; }
+  .text-pretty   { text-wrap: pretty; }
+
+  /* Accent colour text */
+  .text-accent   { color: var(--c-accent); }
+  .text-ink      { color: var(--c-ink); }
+  .text-umber    { color: var(--c-umber); }
+  .text-bark     { color: var(--c-bark); }
+  .text-stone    { color: var(--c-stone); }
+  .text-cream    { color: var(--c-cream); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOISE OVERLAY — paper-like texture applied to dark or image sections
+   Usage: add class "noise" to the element, position children relatively
+══════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  .noise-overlay { position: relative; isolation: isolate; }
+  .noise-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+  }
+  .noise-overlay > * { position: relative; z-index: 1; }
+}
