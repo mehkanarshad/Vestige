@@ -3,7 +3,7 @@
 import { useCallback, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
-import { Upload, Camera, ArrowRight } from "lucide-react";
+import { Upload, Camera, ArrowRight, Sun, UserRound, ShieldCheck } from "lucide-react";
 import { useSessionStore } from "@/lib/session-store";
 import { StepIndicator } from "@/components/session/step-indicator";
 import { Spinner } from "@/components/ui/spinner";
@@ -87,27 +87,38 @@ export default function PhotoStep() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-8">
+    <div className="mx-auto max-w-5xl">
+      <div className="mb-9 max-w-2xl">
         <StepIndicator current={1} />
-        <h1 className="display-md text-vestige-ink mt-6 mb-2">
-          Upload your photo
+        <p className="t-label mt-7 text-vestige-bark">Your styling session begins here</p>
+        <h1 className="t-display-lg mt-3 mb-3 text-vestige-ink">
+          A clear picture. <span className="text-vestige-bark">A more personal style.</span>
         </h1>
-        <p className="body-lg text-sm">
+        <p className="t-body-md max-w-xl">
           Vestige uses your photo to analyse your skin and personalise every
-          recommendation. A well-lit, face-forward photo works best.
+          recommendation. Choose a well-lit, face-forward photo to get started.
         </p>
       </div>
 
-      {/* Drop zone */}
-      <div
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.75fr)] lg:items-stretch">
+        <section aria-label="Choose a photo">
+          <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => !localPreview && inputRef.current?.click()}
-        className={`relative rounded-lg border-2 border-dashed transition-colors duration-200 overflow-hidden
-          ${dragging ? "border-vestige-bark bg-vestige-sand/40" : "border-vestige-sand bg-white/40"}
-          ${!localPreview ? "cursor-pointer hover:border-vestige-bark hover:bg-vestige-sand/20" : ""}
+        onKeyDown={(e) => {
+          if (!localPreview && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        role="button"
+        tabIndex={localPreview ? -1 : 0}
+        aria-label={localPreview ? "Uploaded photo preview" : "Choose or drop a photo to upload"}
+        className={`relative min-h-[340px] overflow-hidden border-2 border-dashed transition-colors duration-200 sm:min-h-[400px]
+          ${dragging ? "border-vestige-accent bg-vestige-parchment" : "border-vestige-sand bg-vestige-white"}
+          ${!localPreview ? "cursor-pointer hover:border-vestige-accent hover:bg-vestige-parchment/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-vestige-accent focus-visible:outline-offset-4" : ""}
         `}
       >
         {localPreview ? (
@@ -126,83 +137,102 @@ export default function PhotoStep() {
                 setLocalPreview(null);
                 setLocalFile(null);
               }}
-              className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm text-vestige-ink text-xs px-3 py-1.5 rounded-sm hover:bg-white transition-colors"
+              className="absolute right-4 top-4 bg-vestige-ink px-4 py-2 font-sans text-xs font-medium text-vestige-cream transition-colors hover:bg-vestige-charcoal"
             >
               Change
             </button>
           </div>
         ) : (
-          <div className="py-16 flex flex-col items-center gap-4 text-vestige-stone">
-            <div className="h-12 w-12 rounded-full bg-vestige-sand flex items-center justify-center">
-              <Upload className="h-5 w-5" />
+          <div className="flex min-h-[340px] flex-col items-center justify-center gap-5 px-6 py-12 text-center text-vestige-stone sm:min-h-[400px]">
+            <div className="flex h-16 w-16 items-center justify-center bg-vestige-ink text-vestige-accent">
+              <Upload className="h-6 w-6" strokeWidth={1.7} />
             </div>
-            <div className="text-center">
-              <p className="font-sans text-sm text-vestige-bark">
-                Drop your photo here
+            <div>
+              <p className="font-serif text-2xl font-semibold text-vestige-ink">
+                Drop your photo here.
               </p>
-              <p className="font-sans text-xs text-vestige-stone mt-1">
-                or click to browse
+              <p className="t-body-sm mt-2 text-vestige-bark">
+                Or <span className="font-semibold text-vestige-ink">browse files</span> from your device
               </p>
             </div>
-            <p className="font-sans text-xs text-vestige-stone/60">
-              JPEG or PNG · up to 10 MB
+            <p className="t-label-sm text-vestige-stone">
+              JPEG, PNG or WebP <span className="px-1 text-vestige-accent">/</span> Up to 10 MB
             </p>
           </div>
         )}
-      </div>
+          </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleFile(f);
-        }}
-      />
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
+          />
 
-      {/* Camera button hint */}
-      {!localPreview && (
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="mt-3 w-full btn-secondary text-sm gap-2"
-        >
-          <Camera className="h-4 w-4" />
-          Browse files
-        </button>
-      )}
-
-      {error && (
-        <p role="alert" className="mt-3 font-sans text-xs text-red-600">
-          {error}
-        </p>
-      )}
-
-      {/* Continue */}
-      {localPreview && (
-        <button
-          onClick={analyzeAndContinue}
-          disabled={loading}
-          className="mt-6 btn-primary w-full gap-2 text-sm"
-        >
-          {loading ? (
-            <>
-              <Spinner className="h-4 w-4" />
-              Analysing your skin…
-            </>
-          ) : (
-            <>
-              Analyse &amp; continue
-              <ArrowRight className="h-4 w-4" />
-            </>
+          {!localPreview && (
+            <button
+              onClick={() => inputRef.current?.click()}
+              className="mt-4 btn-secondary w-full gap-2 text-sm"
+            >
+              <Camera className="h-4 w-4" />
+              Browse files
+            </button>
           )}
-        </button>
-      )}
 
-      <p className="mt-4 font-sans text-xs text-vestige-stone text-center">
-        Your photo is used only for this session&apos;s analysis and try-on.
-      </p>
+          {error && (
+            <p role="alert" className="mt-3 font-sans text-xs text-red-600">
+              {error}
+            </p>
+          )}
+
+          {localPreview && (
+            <button
+              onClick={analyzeAndContinue}
+              disabled={loading}
+              className="mt-4 btn-accent w-full gap-2 text-sm"
+            >
+              {loading ? (
+                <>
+                  <Spinner className="h-4 w-4" />
+                  Analysing your skin…
+                </>
+              ) : (
+                <>
+                  Analyse &amp; continue
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          )}
+        </section>
+
+        <aside className="flex flex-col justify-between bg-vestige-parchment p-6 sm:p-8">
+          <div>
+            <p className="t-label text-vestige-bark">A little photo guidance</p>
+            <h2 className="t-display-md mt-4 text-vestige-ink">The best results start with you.</h2>
+            <div className="mt-7 space-y-6">
+              <div className="flex gap-4">
+                <Sun className="mt-0.5 h-5 w-5 shrink-0 text-vestige-accent" strokeWidth={1.7} />
+                <p className="t-body-sm text-vestige-umber"><span className="font-semibold text-vestige-ink">Find soft daylight</span><br />Face a window and avoid strong shadows.</p>
+              </div>
+              <div className="flex gap-4">
+                <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-vestige-accent" strokeWidth={1.7} />
+                <p className="t-body-sm text-vestige-umber"><span className="font-semibold text-vestige-ink">Look straight ahead</span><br />Keep your face centered and unobstructed.</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 border-t border-vestige-sand pt-5">
+            <div className="flex gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-vestige-sage" strokeWidth={1.7} />
+              <p className="t-body-sm text-vestige-bark">Your photo is used only for this session&apos;s analysis and try-on.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
