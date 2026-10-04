@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/session-guard";
 import { analyzeSkin } from "@/lib/youcam";
 import { YouCamApiError } from "@/lib/youcam/client";
 import { prisma } from "@/lib/db/client";
+import { saveSkinPassport, summaryFromSkinPassport } from "@/lib/skin-passport";
+import { SkinPassport, SkinSummary, SkinAnalysisRaw } from "@/types";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
@@ -47,7 +49,25 @@ export async function POST(req: NextRequest) {
       .jpeg({ quality: 88 })
       .toBuffer();
 
-    const { raw, summary } = await analyzeSkin({ image });
+    const profile = await prisma.styleProfile.findUnique({ where: { userId: userId! } });
+    const passport = profile?.skinPassport
+      ? (JSON.parse(profile.skinPassport) as SkinPassport)
+      : null;
+
+    let raw: SkinAnalysisRaw;
+    let summary: SkinSummary;
+    if (passport?.skinLab) {
+      summary = summaryFromSkinPassport(passport);
+      raw = {
+        skinAnalysis: { source: "stored_skin_passport" },
+        facialColorAnalysis: { source: "stored_skin_passport" },
+      };
+    } else {
+      const analysis = await analyzeSkin({ image });
+      raw = analysis.raw;
+      summary = analysis.summary;
+      await saveSkinPassport(userId!, summary);
+    }
 
     const photoDataUrl = `data:image/jpeg;base64,${image.toString("base64")}`;
 

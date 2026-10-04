@@ -30,7 +30,26 @@ export default async function JourneyPage() {
       where:   { userId: session.user.id, completedStep: { gte: 2 } },
       orderBy: { createdAt: "desc" },
       take:    40,
-      include: { feedback: { orderBy: { createdAt: "desc" }, take: 1 } },
+      select: {
+        id: true,
+        createdAt: true,
+        completedStep: true,
+        intention: true,
+        selectedOutfit: true,
+        skinSummary: true,
+        tryOnGarmentName: true,
+        tryOnColorScore: true,
+        feedback: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { type: true, detail: true },
+        },
+        garmentInteractions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { action: true, garment: { select: { name: true } } },
+        },
+      },
     }),
     prisma.styleEvolution.findMany({
       where:   { userId: session.user.id },
@@ -128,6 +147,7 @@ export default async function JourneyPage() {
                 const outfit  = parseJson<OutfitRecommendation>(s.selectedOutfit ?? null);
                 const skin    = parseJson<SkinSummary>(s.skinSummary ?? null);
                 const fb      = s.feedback[0];
+                const garmentReaction = s.garmentInteractions[0];
                 const isFirst = idx === 0;
 
                 return (
@@ -169,6 +189,21 @@ export default async function JourneyPage() {
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mb-3">
                       {s.intention && (
                         <span className="t-label-sm text-vestige-stone capitalize">{s.intention}</span>
+                      )}
+                      {s.tryOnGarmentName && (
+                        <span className="t-label-sm text-vestige-stone">
+                          Tried: {s.tryOnGarmentName}
+                        </span>
+                      )}
+                      {typeof s.tryOnColorScore === "number" && (
+                        <span className="t-label-sm text-vestige-stone">
+                          Color match: {s.tryOnColorScore}/100
+                        </span>
+                      )}
+                      {garmentReaction && (
+                        <span className="t-label-sm text-vestige-stone capitalize">
+                          {garmentReaction.action.replaceAll("_", " ")}: {garmentReaction.garment.name}
+                        </span>
                       )}
                       {skin && (
                         <span className="t-label-sm text-vestige-stone capitalize">

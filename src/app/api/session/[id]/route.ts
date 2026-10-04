@@ -51,6 +51,11 @@ export async function PATCH(
     "skinSummary",
     "recommendations",
     "selectedOutfit",
+    "tryOnGarmentId",
+    "tryOnGarmentImage",
+    "tryOnGarmentName",
+    "tryOnGarmentCategory",
+    "tryOnGarmentColor",
     "tryOnImageUrl",
   ] as const;
 
@@ -65,6 +70,20 @@ export async function PATCH(
     }
   }
 
+  const numberFields = [
+    "tryOnColorScore",
+    "tryOnColorDeltaE",
+    "tryOnColorContrast",
+    "tryOnColorHarmony",
+  ] as const;
+  type NumberField = typeof numberFields[number];
+  const numberUpdate: Partial<Record<NumberField, number | null>> = {};
+  for (const key of numberFields) {
+    if (key in body) {
+      numberUpdate[key] = body[key] === null ? null : Number(body[key]);
+    }
+  }
+
   const completedStep =
     "completedStep" in body ? Number(body.completedStep) : undefined;
 
@@ -72,6 +91,7 @@ export async function PATCH(
     where: { id },
     data: {
       ...stringUpdate,
+      ...numberUpdate,
       ...(completedStep !== undefined ? { completedStep } : {}),
     },
   });

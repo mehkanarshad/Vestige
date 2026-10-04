@@ -3,6 +3,13 @@
 import { create } from "zustand";
 import { SkinSummary, OutfitRecommendation, StyleIntention } from "@/types";
 
+export interface TryOnGarment {
+  garmentId: string;
+  imageUrl: string;
+  name: string;
+  category: "top" | "bottom" | "dress" | "outerwear";
+}
+
 interface SessionStore {
   sessionId: string | null;
   photoFile: File | null;
@@ -12,6 +19,7 @@ interface SessionStore {
   recommendations: OutfitRecommendation[];
   selectedOutfit: OutfitRecommendation | null;
   tryOnImageUrl: string | null;
+  tryOnGarment: TryOnGarment | null;
 
   setSessionId: (id: string) => void;
   setPhoto: (file: File, preview: string) => void;
@@ -20,6 +28,7 @@ interface SessionStore {
   setRecommendations: (r: OutfitRecommendation[]) => void;
   setSelectedOutfit: (o: OutfitRecommendation) => void;
   setTryOnImageUrl: (url: string) => void;
+  setTryOnGarment: (garment: TryOnGarment | null) => void;
   reset: () => void;
 }
 
@@ -32,6 +41,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   recommendations: [],
   selectedOutfit: null,
   tryOnImageUrl: null,
+  tryOnGarment: null,
 
   setSessionId: (id) => set({ sessionId: id }),
   setPhoto: (file, preview) => set({ photoFile: file, photoPreview: preview }),
@@ -40,6 +50,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setRecommendations: (r) => set({ recommendations: r }),
   setSelectedOutfit: (o) => set({ selectedOutfit: o }),
   setTryOnImageUrl: (url) => set({ tryOnImageUrl: url }),
+  setTryOnGarment: (garment) => set({ tryOnGarment: garment }),
   reset: () =>
     set({
       sessionId: null,
@@ -50,5 +61,6 @@ export const useSessionStore = create<SessionStore>((set) => ({
       recommendations: [],
       selectedOutfit: null,
       tryOnImageUrl: null,
+      tryOnGarment: null,
     }),
 }));

@@ -55,7 +55,7 @@ const QUICK_NOTES = [
 export default function FeedbackStep() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { selectedOutfit, tryOnImageUrl } = useSessionStore();
+  const { selectedOutfit, tryOnImageUrl, tryOnGarment } = useSessionStore();
 
   const [feedbackType, setFeedbackType] = useState<
     "liked" | "rejected" | "adjusted" | null
@@ -76,10 +76,14 @@ export default function FeedbackStep() {
     setLoading(true);
     setError("");
 
+    const garmentNote = tryOnGarment
+      ? `Uploaded garment tried: ${tryOnGarment.name} (${tryOnGarment.category})`
+      : "";
     const combinedDetail = [
+      garmentNote,
       ...quickNotes,
       ...(detail.trim() ? [detail.trim()] : []),
-    ].join("; ");
+    ].filter(Boolean).join("; ").slice(0, 500);
 
     try {
       const res = await fetch("/api/feedback", {
@@ -127,7 +131,7 @@ export default function FeedbackStep() {
             <div className="relative h-20 w-16 rounded-sm overflow-hidden flex-shrink-0 border border-vestige-sand">
               <Image
                 src={tryOnImageUrl}
-                alt={selectedOutfit.name}
+                alt={tryOnGarment?.name ?? selectedOutfit.name}
                 fill
                 className="object-cover"
                 unoptimized
@@ -137,10 +141,10 @@ export default function FeedbackStep() {
           <div>
             <p className="caption mb-1">You tried on</p>
             <p className="font-serif text-lg text-vestige-ink">
-              {selectedOutfit.name}
+              {tryOnGarment?.name ?? selectedOutfit.name}
             </p>
             <p className="font-sans text-xs text-vestige-stone mt-0.5">
-              {selectedOutfit.items.map((i) => i.name).join(", ")}
+              Style inspiration: {selectedOutfit.name}
             </p>
           </div>
         </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
-import { StyleProfileData } from "@/types";
+import { SkinPassport, StyleProfileData } from "@/types";
 import { ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +30,7 @@ export default async function StyleProfilePage() {
     skinTraits: null, preferredStyles: [], avoidedStyles: [],
     intentions: {}, colorPalette: [], styleSummary: "", sessionCount: 0,
   };
+  const skinPassport = parseJson<SkinPassport>(profileRow?.skinPassport ?? null);
 
   const topIntentions = Object.entries(profile.intentions).sort(([, a], [, b]) => b - a).slice(0, 5);
   const maxCount      = topIntentions[0]?.[1] ?? 1;
@@ -150,6 +151,63 @@ export default async function StyleProfilePage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {skinPassport && (
+            <div className="container-lg py-section border-b border-vestige-sand">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+                <div>
+                  <p className="t-label text-vestige-stone mb-3">Skin Passport</p>
+                  <p className="font-sans text-sm text-vestige-bark">
+                    Stored from your first analysis. Garment color scores use these Lab coordinates.
+                  </p>
+                </div>
+                <p className="t-label-sm text-vestige-stone">
+                  Captured {new Date(skinPassport.capturedAt).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 items-end">
+                <div className="flex items-center gap-3 col-span-2 sm:col-span-1">
+                  <div
+                    className="h-12 w-12 border border-vestige-sand"
+                    style={{ backgroundColor: skinPassport.toneColor }}
+                    aria-label={`Measured skin color ${skinPassport.toneColor}`}
+                  />
+                  <div>
+                    <p className="t-label-sm text-vestige-stone">Measured color</p>
+                    <p className="font-mono text-xs text-vestige-ink">{skinPassport.toneColor}</p>
+                  </div>
+                </div>
+                {[
+                  { label: "L* · lightness", value: skinPassport.skinLab.l },
+                  { label: "a* · green/red", value: skinPassport.skinLab.a },
+                  { label: "b* · blue/yellow", value: skinPassport.skinLab.b },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="t-label-sm text-vestige-stone mb-2">{label}</p>
+                    <p className="font-serif text-vestige-ink" style={{ fontSize: "1.5rem" }}>
+                      {value.toFixed(1)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {Object.keys(skinPassport.concerns).length > 0 && (
+                <div className="mt-8 max-w-xl">
+                  <p className="t-label-sm text-vestige-stone mb-3">Concern severity · stored 0–100</p>
+                  <div className="flex flex-wrap gap-x-5 gap-y-2">
+                    {Object.entries(skinPassport.concerns)
+                      .sort(([, left], [, right]) => right - left)
+                      .map(([concern, severity]) => (
+                        <span key={concern} className="font-sans text-xs text-vestige-bark capitalize">
+                          {concern.replaceAll("_", " ")} {Math.round(severity * 100)}%
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

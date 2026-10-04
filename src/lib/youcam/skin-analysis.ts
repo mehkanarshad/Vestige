@@ -6,6 +6,7 @@ import {
   YouCamApiError,
   YouCamTaskResult,
 } from "./client";
+import { hexToLab } from "@/lib/color-science";
 
 export interface SkinAnalysisInput {
   image: Buffer;
@@ -86,12 +87,16 @@ function extractSummary(
     age_spot: "dark spots",
   };
   const rawAttributes: Record<string, number> = {};
+  const concernScores: Record<string, number> = {};
   const concerns: string[] = [];
 
   for (const item of output) {
     if (!item.type || typeof item.raw_score !== "number") continue;
     const key = item.region ? `${item.type}_${item.region}` : item.type;
     rawAttributes[key] = item.raw_score;
+    if (labels[item.type]) {
+      concernScores[key] = Math.max(0, Math.min(1, 1 - item.raw_score / 100));
+    }
     if (labels[item.type] && item.raw_score < 60 && !concerns.includes(labels[item.type])) {
       concerns.push(labels[item.type]);
     }
@@ -104,14 +109,18 @@ function extractSummary(
       typeof value === "string" &&
       /^(normal|oily|dry|combination)(\s|$)/i.test(value)
   );
-  const toneColor = typeof color.skin_color === "string" ? color.skin_color : undefined;
+  const toneColor = typeof color.skin_color === "string" && /^#[\da-f]{6}$/i.test(color.skin_color)
+    ? color.skin_color
+    : undefined;
 
   return {
     tone: toneColor ? classifyTone(toneColor) : "not assessed",
     toneColor,
+    skinLab: toneColor ? hexToLab(toneColor) : null,
     undertone: "not assessed",
     skinType: skinType ?? "not assessed",
     concerns,
+    concernScores,
     rawAttributes,
   };
 }

@@ -8,10 +8,28 @@ export interface SkinAnalysisRaw {
 export interface SkinSummary {
   tone: string;
   toneColor?: string;
+  skinLab: LabColor | null;
   undertone: string;
   skinType: string;
   concerns: string[];
+  concernScores: Record<string, number>;
   rawAttributes: Record<string, number>;
+}
+
+export interface LabColor {
+  l: number;
+  a: number;
+  b: number;
+}
+
+export interface SkinPassport {
+  version: 1;
+  capturedAt: string;
+  tone: string;
+  toneColor: string;
+  skinType: string;
+  skinLab: LabColor;
+  concerns: Record<string, number>;
 }
 
 // ── YouCam VTO ────────────────────────────────────────────────────────────────
@@ -20,7 +38,9 @@ export interface VtoRequest {
   userPhotoUrl?: string;
   userPhotoBase64?: string;
   userPhotoType?: "image/jpeg" | "image/png";
-  garmentImageUrl: string;
+  garmentImage?: Uint8Array;
+  garmentImageType?: "image/jpeg" | "image/png";
+  garmentImageUrl?: string;
   garmentCategory: string; // "top" | "bottom" | "dress" | "outerwear"
 }
 

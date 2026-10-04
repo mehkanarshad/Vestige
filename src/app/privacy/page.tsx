@@ -51,9 +51,10 @@ export default function PrivacyPage() {
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Photos.</strong>{" "}
-            Photos you upload are sent to YouCam for skin analysis and clothing try-on.
-            A normalized JPEG copy is stored in your session database so the selected
-            outfit can be tried on using the same photo.
+            Your first portrait is sent to YouCam for skin analysis. For each try-on,
+            the session portrait and selected garment are sent to YouCam for rendering.
+            The normalized portrait, uploaded garment image, and generated try-on are
+            stored with the session so you can revisit the result and continue styling.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Skin analysis results.</strong>{" "}

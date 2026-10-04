@@ -77,7 +77,7 @@ export default async function LandingPage() {
             {[
               { label: "YouCam Skin AI", sub: "Complexion analysis" },
               { label: "Virtual Try-On", sub: "See it on you" },
-              { label: "GPT-4o Stylist", sub: "Persistent memory" },
+              { label: "Personal stylist", sub: "Persistent memory" },
             ].map(({ label, sub }) => (
               <div key={label}>
                 <p className="font-sans text-vestige-ink" style={{ fontSize: "0.8125rem", fontWeight: 500, letterSpacing: "0.01em" }}>
@@ -153,7 +153,7 @@ export default async function LandingPage() {
           {[
             { n: "01", title: "Skin-aware analysis",     body: "YouCam returns facial skin color and concern scores for complexion-aware styling." },
             { n: "02", title: "Intention-driven styling", body: "Choose how you want to feel. Three curated outfits built around your complexion and that intention." },
-            { n: "03", title: "Virtual try-on",           body: "YouCam composites your chosen outfit onto your photo. You see the look before committing." },
+            { n: "03", title: "Virtual try-on",           body: "Upload any garment you are considering. YouCam renders that piece on your photo; recommendations stay guidance, not a catalog limit." },
             { n: "04", title: "Memory that compounds",    body: "Every like, rejection, and note is stored. Session five looks nothing like session one." },
           ].map(({ n, title, body }) => (
             <div key={n}>

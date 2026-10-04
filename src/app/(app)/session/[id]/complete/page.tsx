@@ -7,7 +7,7 @@ import { useSessionStore } from "@/lib/session-store";
 
 export default function CompleteStep() {
   const { id } = useParams<{ id: string }>();
-  const { selectedOutfit, intention, skinSummary } = useSessionStore();
+  const { selectedOutfit, intention, skinSummary, tryOnGarment } = useSessionStore();
 
   return (
     <div className="max-w-lg mx-auto text-center py-12">
@@ -27,7 +27,7 @@ export default function CompleteStep() {
             {intention ? `, your ${intention} intention` : ""}, and your
             feedback on{" "}
             <span className="text-vestige-espresso italic">
-              {selectedOutfit.name}
+              {tryOnGarment?.name ?? selectedOutfit.name}
             </span>
             . Every future session gets smarter.
           </>
@@ -54,7 +54,13 @@ export default function CompleteStep() {
         {selectedOutfit && (
           <div className="flex items-center gap-2 font-sans text-xs text-vestige-bark">
             <div className="h-1.5 w-1.5 rounded-full bg-vestige-gold" />
-            Outfit tried: {selectedOutfit.name}
+            Style inspiration: {selectedOutfit.name}
+          </div>
+        )}
+        {tryOnGarment && (
+          <div className="flex items-center gap-2 font-sans text-xs text-vestige-bark">
+            <div className="h-1.5 w-1.5 rounded-full bg-vestige-gold" />
+            Garment tried: {tryOnGarment.name} ({tryOnGarment.category})
           </div>
         )}
         <div className="flex items-center gap-2 font-sans text-xs text-vestige-bark">

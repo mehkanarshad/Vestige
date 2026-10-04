@@ -95,8 +95,7 @@ export default function PhotoStep() {
           A clear picture. <span className="text-vestige-bark">A more personal style.</span>
         </h1>
         <p className="t-body-md max-w-xl">
-          Vestige analyses your skin and uses the same photo for clothing try-on.
-          Choose an evenly lit, face-forward portrait with your shoulders visible.
+          Your first skin analysis creates a saved Skin Passport. Later sessions reuse that profile; the session portrait is still used for garment try-on. Choose an evenly lit, face-forward photo with your shoulders visible.
         </p>
       </div>
 

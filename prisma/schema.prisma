@@ -15,6 +15,8 @@ model User {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   sessions       Session[]
+  garments       Garment[]             @relation("OwnedGarments")
+  garmentInteractions GarmentInteraction[]
   styleProfile   StyleProfile?
   styleEvolution StyleEvolution[]
 }
@@ -35,10 +37,60 @@ model Session {
   recommendations String?    // JSON string — array of OutfitRecommendation
   // Step 5 — try-on
   selectedOutfit  String?    // JSON string — chosen outfit
+  tryOnGarmentId String?
+  tryOnGarment   Garment?   @relation(fields: [tryOnGarmentId], references: [id], onDelete: SetNull)
+  tryOnGarmentImage    String? // Uploaded product image for the session try-on
+  tryOnGarmentName     String?
+  tryOnGarmentCategory String?
+  tryOnGarmentColor    String?
+  tryOnColorScore      Int?
+  tryOnColorDeltaE     Float?
+  tryOnColorContrast   Int?
+  tryOnColorHarmony    Int?
   tryOnImageUrl   String?
   // Step tracking
   completedStep   Int        @default(0)
   feedback        Feedback[]
+  garmentInteractions GarmentInteraction[]
+}
+
+model Garment {
+  id           String   @id @default(cuid())
+  ownerUserId  String?
+  owner        User?    @relation("OwnedGarments", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  source       String   // "user_upload" | "catalog"
+  externalId   String?
+  imageHash    String?
+  name         String
+  category     String
+  imageData    String?
+  imageUrl     String?
+  colorHex     String
+  colorLab     String   // JSON-encoded LabColor
+  colorConfidence Float?
+  createdAt    DateTime @default(now())
+  sessions     Session[]
+  interactions GarmentInteraction[]
+
+  @@index([ownerUserId, source])
+  @@index([externalId])
+}
+
+model GarmentInteraction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  garmentId String
+  garment   Garment  @relation(fields: [garmentId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  action    String   // "liked" | "rejected" | "more_like_this"
+  rating    Float
+  createdAt DateTime @default(now())
+
+  @@unique([userId, garmentId, sessionId])
+  @@index([userId, createdAt])
+  @@index([garmentId, createdAt])
 }
 
 model Feedback {
@@ -56,6 +108,11 @@ model StyleProfile {
   id              String   @id @default(cuid())
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skinPassport    String?  // Immutable, versioned CIELAB coordinates and concern scores
+  skinPassportCapturedAt DateTime?
+  garmentPreferences String? // JSON-encoded versioned attribute preference vector
+  garmentInteractionCount Int @default(0)
+  preferenceRevision Int @default(0)
   skinTraits      String?  // JSON string
   preferredStyles String?  // JSON string — string[]
   avoidedStyles   String?  // JSON string — string[]
