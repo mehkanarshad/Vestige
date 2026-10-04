@@ -51,15 +51,14 @@ export default function PrivacyPage() {
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Photos.</strong>{" "}
-            Photos you upload are sent to the YouCam Skin Analysis API and YouCam Virtual
-            Try-On API for processing. We store a reference to the session photo during
-            an active session. We do not permanently store raw photos on our servers.
+            Photos you upload are sent to YouCam for skin analysis and clothing try-on.
+            A normalized JPEG copy is stored in your session database so the selected
+            outfit can be tried on using the same photo.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Skin analysis results.</strong>{" "}
-            Structured data returned by YouCam — skin tone, undertone, skin type, and
-            concern scores — is stored against your style profile to enable personalisation
-            across sessions.
+            YouCam's facial skin-color result and skin-concern scores are stored with your
+            session and style profile. YouCam does not return an undertone result.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Session data.</strong>{" "}

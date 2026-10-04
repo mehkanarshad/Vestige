@@ -172,7 +172,7 @@ export default async function StylingSessionPage() {
             {[
               {
                 step: "You",
-                body: "Upload a photo. It takes seconds. Vestige passes it to YouCam Skin AI and reads your complexion — tone, undertone, and any concerns.",
+                body: "Upload a face-and-shoulders photo. YouCam returns skin-concern scores and a facial skin-color sample for styling context.",
               },
               {
                 step: "Understand",

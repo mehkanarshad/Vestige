@@ -24,8 +24,8 @@ export default function PhotoStep() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload a JPEG or PNG photo.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Please upload a JPEG, PNG, or WebP photo.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -95,8 +95,8 @@ export default function PhotoStep() {
           A clear picture. <span className="text-vestige-bark">A more personal style.</span>
         </h1>
         <p className="t-body-md max-w-xl">
-          Vestige uses your photo to analyse your skin and personalise every
-          recommendation. Choose a well-lit, face-forward photo to get started.
+          Vestige analyses your skin and uses the same photo for clothing try-on.
+          Choose an evenly lit, face-forward portrait with your shoulders visible.
         </p>
       </div>
 

@@ -1,22 +1,13 @@
 // ── YouCam Skin Analysis ──────────────────────────────────────────────────────
 
 export interface SkinAnalysisRaw {
-  // Top-level YouCam API response shape (adapt to actual spec)
-  status: number;
-  message: string;
-  data: SkinAnalysisData;
-}
-
-export interface SkinAnalysisData {
-  skinTone?: string;           // e.g. "light", "medium", "deep"
-  undertone?: string;          // e.g. "warm", "cool", "neutral"
-  skinType?: string;           // e.g. "oily", "dry", "combination"
-  concerns?: string[];         // e.g. ["dark circles", "uneven texture"]
-  attributes?: Record<string, number>; // confidence scores
+  skinAnalysis: unknown;
+  facialColorAnalysis: unknown;
 }
 
 export interface SkinSummary {
   tone: string;
+  toneColor?: string;
   undertone: string;
   skinType: string;
   concerns: string[];
@@ -26,7 +17,9 @@ export interface SkinSummary {
 // ── YouCam VTO ────────────────────────────────────────────────────────────────
 
 export interface VtoRequest {
-  userPhotoUrl: string;
+  userPhotoUrl?: string;
+  userPhotoBase64?: string;
+  userPhotoType?: "image/jpeg" | "image/png";
   garmentImageUrl: string;
   garmentCategory: string; // "top" | "bottom" | "dress" | "outerwear"
 }

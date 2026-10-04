@@ -48,6 +48,11 @@ export default function TryOnStep() {
     const topItem =
       outfit.items.find((i) => i.category === "top" || i.category === "dress") ??
       outfit.items[0];
+    if (!topItem.garmentImageUrl) {
+      setError("This look needs a product image before it can be tried on.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/try-on", {
@@ -56,9 +61,7 @@ export default function TryOnStep() {
         body: JSON.stringify({
           sessionId: id,
           outfitId: outfit.id,
-          garmentImageUrl:
-            topItem.garmentImageUrl ??
-            `https://placehold.co/400x600/C4B8A8/3D2B1F?text=${encodeURIComponent(topItem.name)}`,
+          garmentImageUrl: topItem.garmentImageUrl,
           garmentCategory: topItem.category,
         }),
       });
@@ -82,7 +85,6 @@ export default function TryOnStep() {
     if (outfit.id === activeOutfit?.id) return;
     setActiveOutfit(outfit);
     setTryOnImageUrl("");
-    triggerTryOn(outfit);
   }
 
   const displayUrl = tryOnImageUrl || photoPreview;

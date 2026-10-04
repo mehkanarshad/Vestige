@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/session-guard";
-import { analyzeSkin, SkinAnalysisError } from "@/lib/youcam";
+import { analyzeSkin } from "@/lib/youcam";
+import { YouCamApiError } from "@/lib/youcam/client";
 import { prisma } from "@/lib/db/client";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const { userId, error } = await requireAuth();
@@ -18,20 +20,36 @@ export async function POST(req: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: "No photo provided" }, { status: 400 });
     }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      return NextResponse.json(
+        { error: "Photo must be a JPEG, PNG, or WebP image" },
+        { status: 400 }
+      );
+    }
+    if (file.size === 0 || file.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "Photo must be smaller than 10 MB" },
+        { status: 400 }
+      );
+    }
 
-    // Convert to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = file.type.includes("png") ? "png" : "jpeg";
+    const original = Buffer.from(await file.arrayBuffer());
+    const metadata = await sharp(original).metadata();
+    if (!metadata.width || !metadata.height || Math.min(metadata.width, metadata.height) < 480) {
+      return NextResponse.json(
+        { error: "Photo dimensions must be at least 480 pixels on the short side" },
+        { status: 400 }
+      );
+    }
+    const image = await sharp(original)
+      .rotate()
+      .resize({ width: 2560, height: 2560, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 88 })
+      .toBuffer();
 
-    // Call YouCam Skin Analysis (or mock)
-    const { raw, summary } = await analyzeSkin({
-      imageBase64: base64,
-      imageType: mimeType,
-    });
+    const { raw, summary } = await analyzeSkin({ image });
 
-    // Store a data-URI as the photo URL for display purposes
-    const photoDataUrl = `data:image/${mimeType};base64,${base64}`;
+    const photoDataUrl = `data:image/jpeg;base64,${image.toString("base64")}`;
 
     // Persist to session if sessionId provided
     if (sessionId) {
@@ -53,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ summary, sessionId });
   } catch (err) {
-    if (err instanceof SkinAnalysisError) {
+    if (err instanceof YouCamApiError) {
       return NextResponse.json(
         { error: err.message },
         { status: err.statusCode ?? 500 }

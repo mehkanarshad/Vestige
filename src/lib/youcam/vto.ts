@@ -1,69 +1,48 @@
-/**
- * YouCam Virtual Try-On (VTO) API client.
- *
- * Docs: https://developer.youcam.com/vto
- */
-
 import { VtoRequest, VtoResponse } from "@/types";
+import {
+  createYouCamTask,
+  uploadYouCamImage,
+  waitForYouCamTask,
+  YouCamApiError,
+} from "./client";
 
-export class VtoError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number
-  ) {
-    super(message);
-    this.name = "VtoError";
-  }
-}
+export class VtoError extends YouCamApiError {}
 
 export async function virtualTryOn(input: VtoRequest): Promise<VtoResponse> {
-  const apiKey = process.env.YOUCAM_VTO_API_KEY;
-  const apiUrl = process.env.YOUCAM_VTO_API_URL;
+  const source = input.userPhotoBase64
+    ? {
+        src_file_id: await uploadYouCamImage(
+          Buffer.from(input.userPhotoBase64, "base64"),
+          input.userPhotoType ?? "image/jpeg"
+        ),
+      }
+    : input.userPhotoUrl
+      ? { src_file_url: input.userPhotoUrl }
+      : null;
+  if (!source) throw new VtoError("No user photo is available for try-on", 400);
 
-  if (!apiKey || !apiUrl) {
-    return mockVto(input);
-  }
-
-  const response = await fetch(`${apiUrl}/try-on`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "X-Client": "vestige/1.0",
-    },
-    body: JSON.stringify({
-      user_photo_url: input.userPhotoUrl,
-      garment_image_url: input.garmentImageUrl,
-      garment_category: input.garmentCategory,
-      output_format: "jpeg",
-      output_quality: 90,
-    }),
+  const taskPath = "/task/cloth-v4";
+  const taskId = await createYouCamTask(taskPath, {
+    ...source,
+    ref_file_url: input.garmentImageUrl,
+    garment_category: mapGarmentCategory(input.garmentCategory),
   });
+  const task = await waitForYouCamTask(taskPath, taskId, 55_000);
+  const results = task.results ?? {};
+  const resultUrl = results.url;
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new VtoError(
-      `YouCam VTO API error ${response.status}: ${text}`,
-      response.status
-    );
+  if (typeof resultUrl !== "string" || !resultUrl) {
+    throw new VtoError("YouCam completed the try-on task without a result URL");
   }
 
-  const data = await response.json();
   return {
-    tryOnImageUrl: data.result_url ?? data.try_on_image_url,
+    tryOnImageUrl: resultUrl,
     status: "success",
   };
 }
 
-/**
- * Mock VTO: returns a placeholder image for demo / dev mode.
- * In a real demo you'd swap in a pre-rendered composite.
- */
-function mockVto(input: VtoRequest): VtoResponse {
-  // Use a fashion-styled placeholder that looks plausible
-  const seed = encodeURIComponent(input.garmentCategory ?? "outfit");
-  return {
-    tryOnImageUrl: `https://placehold.co/480x640/E8DDD0/3D2B1F?text=VTO+Preview&font=playfair-display`,
-    status: "mock",
-  };
+function mapGarmentCategory(category: string): string {
+  if (category === "dress") return "full_body";
+  if (category === "bottom") return "lower_body";
+  return "upper_body";
 }

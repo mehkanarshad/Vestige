@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/session-guard";
-import { virtualTryOn, VtoError } from "@/lib/youcam";
+import { virtualTryOn } from "@/lib/youcam";
+import { YouCamApiError } from "@/lib/youcam/client";
 import { prisma } from "@/lib/db/client";
 import { z } from "zod";
 
@@ -9,7 +10,7 @@ export const maxDuration = 60;
 const RequestSchema = z.object({
   sessionId: z.string(),
   outfitId: z.string(),
-  garmentImageUrl: z.string().url().optional().default("https://placehold.co/400x600/C4B8A8/3D2B1F?text=Garment"),
+  garmentImageUrl: z.string().url(),
   garmentCategory: z.string().optional().default("top"),
 });
 
@@ -37,15 +38,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // For data-URI photos, VTO API needs a real URL.
-    // In production, upload the photo to storage first.
-    // In demo mode, the mock VTO handles this gracefully.
-    const userPhotoUrl = session.photoUrl.startsWith("data:")
-      ? "https://placehold.co/480x640/E8DDD0/3D2B1F?text=User+Photo"
-      : session.photoUrl;
+    const dataUri = /^data:(image\/(?:jpeg|png));base64,([\s\S]+)$/.exec(
+      session.photoUrl
+    );
+    if (session.photoUrl.startsWith("data:") && !dataUri) {
+      return NextResponse.json(
+        { error: "The saved photo format is not supported for try-on" },
+        { status: 400 }
+      );
+    }
 
     const result = await virtualTryOn({
-      userPhotoUrl,
+      userPhotoUrl: dataUri ? undefined : session.photoUrl,
+      userPhotoBase64: dataUri?.[2],
+      userPhotoType: dataUri?.[1] as "image/jpeg" | "image/png" | undefined,
       garmentImageUrl,
       garmentCategory,
     });
@@ -69,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ tryOnImageUrl: result.tryOnImageUrl });
   } catch (err) {
-    if (err instanceof VtoError) {
+    if (err instanceof YouCamApiError) {
       return NextResponse.json(
         { error: err.message },
         { status: err.statusCode ?? 500 }

@@ -1,135 +1,133 @@
-/**
- * YouCam Skin Analysis API client.
- *
- * Docs: https://developer.youcam.com/skin-analysis
- *
- * The real endpoint shape is filled in below. If the actual API differs,
- * only this file needs updating — the rest of the app uses SkinSummary.
- */
-
 import { SkinAnalysisRaw, SkinSummary } from "@/types";
+import {
+  createYouCamTask,
+  uploadYouCamImage,
+  waitForYouCamTask,
+  YouCamApiError,
+  YouCamTaskResult,
+} from "./client";
 
 export interface SkinAnalysisInput {
-  imageBase64: string; // base64-encoded JPEG / PNG, no data URI prefix
-  imageType?: "jpeg" | "png";
+  image: Buffer;
 }
 
-export class SkinAnalysisError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number
-  ) {
-    super(message);
-    this.name = "SkinAnalysisError";
-  }
+export class SkinAnalysisError extends YouCamApiError {}
+
+interface SkinAnalysisOutput {
+  type?: string;
+  region?: string;
+  raw_score?: number;
+  ui_score?: number;
+  value?: unknown;
+  skin_type?: unknown;
+  label?: unknown;
 }
 
 export async function analyzeSkin(
   input: SkinAnalysisInput
 ): Promise<{ raw: SkinAnalysisRaw; summary: SkinSummary }> {
-  const apiKey = process.env.YOUCAM_SKIN_API_KEY;
-  const apiUrl = process.env.YOUCAM_SKIN_API_URL;
-
-  if (!apiKey || !apiUrl) {
-    // In development / demo mode, return realistic mock data
-    return mockSkinAnalysis();
-  }
-
-  const response = await fetch(`${apiUrl}/analyze`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "X-Client": "vestige/1.0",
-    },
-    body: JSON.stringify({
-      image: input.imageBase64,
-      image_type: input.imageType ?? "jpeg",
-      features: [
-        "skin_tone",
-        "undertone",
-        "skin_type",
+  const fileId = await uploadYouCamImage(input.image, "image/jpeg");
+  const analysisPath = "/task/skin-analysis";
+  const colorPath = "/task/skin-tone-analysis";
+  const [analysisTaskId, colorTaskId] = await Promise.all([
+    createYouCamTask(analysisPath, {
+      src_file_id: fileId,
+      dst_actions: [
         "acne",
-        "dark_circles",
-        "wrinkles",
-        "pores",
+        "dark_circle_v2",
+        "wrinkle",
+        "pore",
         "texture",
         "redness",
-        "spots",
+        "age_spot",
+        "skin_type",
       ],
+      format: "json",
     }),
-  });
+    createYouCamTask(colorPath, {
+      src_file_id: fileId,
+      face_angle_strictness_level: "medium",
+    }),
+  ]);
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new SkinAnalysisError(
-      `YouCam Skin API error ${response.status}: ${text}`,
-      response.status
-    );
-  }
+  const [skinAnalysis, facialColorAnalysis] = await Promise.all([
+    waitForYouCamTask(analysisPath, analysisTaskId, 25_000),
+    waitForYouCamTask(colorPath, colorTaskId, 25_000),
+  ]);
 
-  const raw = (await response.json()) as SkinAnalysisRaw;
-  const summary = extractSummary(raw);
+  const raw: SkinAnalysisRaw = { skinAnalysis, facialColorAnalysis };
+  const summary = extractSummary(skinAnalysis, facialColorAnalysis);
   return { raw, summary };
 }
 
-/**
- * Convert the verbose API response into the compact SkinSummary
- * the AI stylist and UI consume.
- */
-function extractSummary(raw: SkinAnalysisRaw): SkinSummary {
-  const d = raw.data ?? {};
-  const attrs = d.attributes ?? {};
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
 
-  // Map score ranges to concern labels
-  const concerns: string[] = [];
-  const thresholds: Record<string, string> = {
+function extractSummary(
+  skinAnalysis: YouCamTaskResult,
+  facialColorAnalysis: YouCamTaskResult
+): SkinSummary {
+  const analysisResults = asRecord(skinAnalysis.results);
+  const colorResults = asRecord(facialColorAnalysis.results);
+  const color = asRecord(colorResults.color);
+  const output = Array.isArray(analysisResults.output)
+    ? (analysisResults.output as SkinAnalysisOutput[])
+    : [];
+  const labels: Record<string, string> = {
     acne: "acne",
-    dark_circles: "dark circles",
-    wrinkles: "fine lines",
-    pores: "enlarged pores",
-    redness: "redness",
-    spots: "dark spots",
+    dark_circle_v2: "dark circles",
+    wrinkle: "fine lines",
+    pore: "enlarged pores",
     texture: "uneven texture",
+    redness: "redness",
+    age_spot: "dark spots",
   };
-  for (const [key, label] of Object.entries(thresholds)) {
-    if (attrs[key] !== undefined && attrs[key] > 0.4) {
-      concerns.push(label);
+  const rawAttributes: Record<string, number> = {};
+  const concerns: string[] = [];
+
+  for (const item of output) {
+    if (!item.type || typeof item.raw_score !== "number") continue;
+    const key = item.region ? `${item.type}_${item.region}` : item.type;
+    rawAttributes[key] = item.raw_score;
+    if (labels[item.type] && item.raw_score < 60 && !concerns.includes(labels[item.type])) {
+      concerns.push(labels[item.type]);
     }
   }
 
+  const skinTypeResult = output.find((item) => item.type === "skin_type");
+  const skinTypeValues = [skinTypeResult?.skin_type, skinTypeResult?.value, skinTypeResult?.label];
+  const skinType = skinTypeValues.find(
+    (value): value is string =>
+      typeof value === "string" &&
+      /^(normal|oily|dry|combination)(\s|$)/i.test(value)
+  );
+  const toneColor = typeof color.skin_color === "string" ? color.skin_color : undefined;
+
   return {
-    tone: d.skinTone ?? "medium",
-    undertone: d.undertone ?? "neutral",
-    skinType: d.skinType ?? "combination",
+    tone: toneColor ? classifyTone(toneColor) : "not assessed",
+    toneColor,
+    undertone: "not assessed",
+    skinType: skinType ?? "not assessed",
     concerns,
-    rawAttributes: attrs,
+    rawAttributes,
   };
 }
 
-/**
- * Realistic mock returned when API keys are absent (dev / demo mode).
- * Simulates a warm-toned medium complexion.
- */
-function mockSkinAnalysis(): { raw: SkinAnalysisRaw; summary: SkinSummary } {
-  const raw: SkinAnalysisRaw = {
-    status: 200,
-    message: "success",
-    data: {
-      skinTone: "medium",
-      undertone: "warm",
-      skinType: "combination",
-      concerns: ["uneven texture", "dark spots"],
-      attributes: {
-        acne: 0.12,
-        dark_circles: 0.38,
-        wrinkles: 0.08,
-        pores: 0.45,
-        redness: 0.15,
-        spots: 0.52,
-        texture: 0.48,
-      },
-    },
-  };
-  return { raw, summary: extractSummary(raw) };
+function classifyTone(hex: string): string {
+  const match = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex);
+  if (!match) return "detected";
+
+  const channels = match.slice(1).map((channel) => parseInt(channel, 16) / 255);
+  const luminance = channels.reduce((sum, channel, index) => {
+    const linear = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    return sum + linear * [0.2126, 0.7152, 0.0722][index];
+  }, 0);
+
+  if (luminance >= 0.56) return "light";
+  if (luminance >= 0.36) return "medium";
+  if (luminance >= 0.2) return "deep";
+  return "rich";
 }

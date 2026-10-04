@@ -151,7 +151,7 @@ export default async function LandingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-12">
           {[
-            { n: "01", title: "Skin-aware analysis",     body: "YouCam reads your tone, undertone, and concerns — giving your stylist real data to work from." },
+            { n: "01", title: "Skin-aware analysis",     body: "YouCam returns facial skin color and concern scores for complexion-aware styling." },
             { n: "02", title: "Intention-driven styling", body: "Choose how you want to feel. Three curated outfits built around your complexion and that intention." },
             { n: "03", title: "Virtual try-on",           body: "YouCam composites your chosen outfit onto your photo. You see the look before committing." },
             { n: "04", title: "Memory that compounds",    body: "Every like, rejection, and note is stored. Session five looks nothing like session one." },

@@ -18,7 +18,7 @@ const UNDERTONE_LABELS: Record<string, { label: string; hint: string }> = {
 };
 
 export function SkinSummaryCard({ summary }: { summary: SkinSummary }) {
-  const swatch = TONE_SWATCHES[summary.tone] ?? TONE_SWATCHES["medium"];
+  const swatch = summary.toneColor ?? TONE_SWATCHES[summary.tone] ?? TONE_SWATCHES["medium"];
   const undertone = UNDERTONE_LABELS[summary.undertone] ?? {
     label: summary.undertone,
     hint: "",
@@ -39,7 +39,9 @@ export function SkinSummaryCard({ summary }: { summary: SkinSummary }) {
             {summary.tone}
           </p>
           <p className="font-sans text-xs text-vestige-bark mt-0.5">
-            {undertone.label} undertone — {undertone.hint}
+            {summary.undertone === "not assessed"
+              ? "Undertone not assessed"
+              : `${undertone.label} undertone — ${undertone.hint}`}
           </p>
         </div>
       </div>
@@ -73,7 +75,9 @@ export function SkinSummaryCard({ summary }: { summary: SkinSummary }) {
       <div className="pt-3 border-t border-vestige-sand">
         <p className="caption mb-1.5">Color guidance</p>
         <p className="font-sans text-xs text-vestige-bark leading-relaxed">
-          {summary.undertone === "warm"
+          {summary.undertone === "not assessed"
+            ? "YouCam did not return an undertone result for this photo."
+            : summary.undertone === "warm"
             ? "Earth tones, warm neutrals, and rich terracottas will complement your complexion beautifully."
             : summary.undertone === "cool"
             ? "Jewel tones, cool grays, and true whites will harmonize with your undertone."
