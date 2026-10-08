@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildPreferenceVector,
+  encodeGarmentAttributes,
+  normalizeGarmentFacet,
   pearsonCorrelation,
   rankGarments,
 } from "./collaborative-filter";
@@ -70,4 +72,35 @@ test("more-like-this contributes more preference weight than a plain like", () =
   ], now);
 
   assert.ok(moreLikeThis.values.some((value, index) => Math.abs(value) > Math.abs(liked.values[index])));
+});
+
+test("catalog facets are represented in the preference vector and affect ranking", () => {
+  const now = new Date("2026-01-01T00:00:00.000Z");
+  const preferred = {
+    ...blueTop,
+    style: "minimalist",
+    silhouette: "relaxed",
+    formality: "casual",
+    texture: "linen",
+    tone: "medium",
+  };
+  const preference = buildPreferenceVector([
+    { action: "liked", attributes: preferred, createdAt: now },
+  ], now);
+  const ranked = rankGarments("user", preference, [], [
+    {
+      id: "matching-facets",
+      attributes: { ...blueTop, style: "minimalist", silhouette: "relaxed" },
+      skinColorScore: 70,
+    },
+    {
+      id: "other-facets",
+      attributes: { ...blueTop, style: "streetwear", silhouette: "oversized" },
+      skinColorScore: 70,
+    },
+  ]);
+
+  assert.equal(ranked[0].id, "matching-facets");
+  assert.equal(normalizeGarmentFacet("formality", "Business Casual"), "business-casual");
+  assert.equal(encodeGarmentAttributes(preferred).length, preference.values.length);
 });

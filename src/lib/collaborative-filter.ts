@@ -1,13 +1,44 @@
 import { LabColor } from "@/types";
 
-export const GARMENT_ATTRIBUTE_VERSION = 1 as const;
+export const GARMENT_ATTRIBUTE_VERSION = 2 as const;
 const CATEGORIES = ["top", "bottom", "dress", "outerwear", "shoes", "accessory"] as const;
-const ATTRIBUTE_COUNT = CATEGORIES.length + 3;
+const FACET_VALUES = {
+  tone: ["light", "medium", "deep"],
+  silhouette: [
+    "a-line", "bodycon", "boxy", "cropped", "fit-and-flare", "fitted",
+    "oversized", "relaxed", "slim", "straight", "tailored", "wide-leg",
+  ],
+  formality: [
+    "activewear", "business-casual", "business-formal", "casual", "formal",
+    "smart-casual",
+  ],
+  style: [
+    "bohemian", "classic", "edgy", "elegant", "minimalist", "modern",
+    "preppy", "professional", "relaxed", "romantic", "sporty", "streetwear",
+    "vintage",
+  ],
+  texture: [
+    "cable-knit", "crochet", "denim", "knit", "lace", "leather", "linen",
+    "ribbed", "satin", "smooth", "suede", "textured", "velvet", "woven",
+  ],
+} as const;
+const LEGACY_ATTRIBUTE_COUNT = CATEGORIES.length + 3;
+export const GARMENT_ATTRIBUTE_COUNT =
+  LEGACY_ATTRIBUTE_COUNT +
+  Object.values(FACET_VALUES).reduce((count, values) => count + values.length, 0);
+const ATTRIBUTE_COUNT = GARMENT_ATTRIBUTE_COUNT;
 const RECENCY_HALF_LIFE_DAYS = 180;
+
+export type GarmentFacet = keyof typeof FACET_VALUES;
 
 export interface GarmentAttributes {
   category: string;
   lab: LabColor;
+  tone?: string | null;
+  silhouette?: string | null;
+  formality?: string | null;
+  style?: string | null;
+  texture?: string | null;
 }
 
 export interface GarmentFeedbackSignal {
@@ -45,12 +76,48 @@ export interface RankedGarment extends GarmentCandidate {
 
 export function encodeGarmentAttributes(attributes: GarmentAttributes): number[] {
   const normalizedCategory = attributes.category.toLowerCase();
+  const facetValues = Object.entries(FACET_VALUES).flatMap(([facet, values]) => {
+    const normalized = normalizeGarmentFacet(facet as GarmentFacet, attributes[facet as GarmentFacet]);
+    return values.map((value) => (value === normalized ? 1 : 0));
+  });
   return [
     ...CATEGORIES.map((category) => (category === normalizedCategory ? 1 : 0)),
     clamp(attributes.lab.l / 100, 0),
     clamp((attributes.lab.a + 128) / 255, 0),
     clamp((attributes.lab.b + 128) / 255, 0),
+    ...facetValues,
   ];
+}
+
+export function normalizeGarmentFacet(
+  facet: GarmentFacet,
+  value: string | null | undefined
+): string | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!normalized) return null;
+
+  const aliases: Partial<Record<GarmentFacet, Record<string, string>>> = {
+    tone: { mid: "medium", "mid tone": "medium", dark: "deep", pale: "light" },
+    silhouette: {
+      "fit flare": "fit-and-flare",
+      "wide leg": "wide-leg",
+      "a line": "a-line",
+    },
+    formality: {
+      "business casual": "business-casual",
+      "business formal": "business-formal",
+      "smart casual": "smart-casual",
+    },
+    style: { "street wear": "streetwear" },
+    texture: { cableknit: "cable-knit" },
+  };
+  const alias = aliases[facet]?.[normalized];
+  if (alias) return alias;
+
+  return FACET_VALUES[facet].find(
+    (candidate) => candidate.replace(/-/g, " ") === normalized
+  ) ?? null;
 }
 
 export function ratingForAction(action: GarmentFeedbackSignal["action"]): number {

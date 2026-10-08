@@ -153,7 +153,7 @@ export default async function LandingPage() {
           {[
             { n: "01", title: "Skin-aware analysis",     body: "YouCam returns facial skin color and concern scores for complexion-aware styling." },
             { n: "02", title: "Intention-driven styling", body: "Choose how you want to feel. Three curated outfits built around your complexion and that intention." },
-            { n: "03", title: "Virtual try-on",           body: "Upload any garment you are considering. YouCam renders that piece on your photo; recommendations stay guidance, not a catalog limit." },
+            { n: "03", title: "Virtual try-on",           body: "Try on a ranked catalog garment or upload another piece. YouCam renders one garment at a time on your photo." },
             { n: "04", title: "Memory that compounds",    body: "Every like, rejection, and note is stored. Session five looks nothing like session one." },
           ].map(({ n, title, body }) => (
             <div key={n}>

@@ -65,8 +65,22 @@ export interface GarmentItem {
   name: string;
   description: string;
   color: string;
-  imageSearchQuery: string; // for VTO lookup
-  garmentImageUrl?: string; // resolved URL for VTO
+  imageSearchQuery?: string;
+  garmentImageUrl?: string;
+  garmentId?: string;
+  colorHex?: string;
+  brand?: string;
+  productUrl?: string;
+  price?: number;
+  currency?: string;
+  attributes?: {
+    tone?: string | null;
+    silhouette?: string | null;
+    formality?: string | null;
+    style?: string | null;
+    texture?: string | null;
+    materials?: string[];
+  };
 }
 
 export interface OutfitRecommendation {

@@ -63,7 +63,8 @@ export default function PrivacyPage() {
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Session data.</strong>{" "}
-            Your styling intention, AI-generated recommendations, the outfit you selected,
+            Your styling intention, catalog products recommended from your profile,
+            the product you selected,
             the virtual try-on result, and your feedback are stored per session.
           </p>
           <p>
@@ -98,11 +99,18 @@ export default function PrivacyPage() {
             data. We transmit only what is required for the feature to function.
           </p>
           <p>
+            <strong className="font-medium text-vestige-espresso">Channel3.</strong>{" "}
+            Vestige sends in-stock women's garment-category searches that include your
+            selected styling intention (such as “professional” or “playful”) to fetch
+            catalog products. Your name, email, photos, skin analysis, and saved
+            style/color preferences are not sent. Product results are stored in Vestige's
+            garment catalog and ranked locally using your profile and garment feedback.
+          </p>
+          <p>
             <strong className="font-medium text-vestige-espresso">OpenAI.</strong>{" "}
-            Your skin analysis summary, styling intention, and style profile are
-            included in prompts sent to the OpenAI API to generate recommendations.
-            No personally identifiable information (name, email, photo) is included
-            in these prompts. OpenAI's usage policies apply.
+            If configured, your style preferences and color palette may be sent to
+            generate a short style-profile summary. OpenAI is not used to generate
+            product recommendations. Your name, email, and photos are not included.
           </p>
         </PolicySection>
 

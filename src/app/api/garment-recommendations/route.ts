@@ -8,6 +8,8 @@ import {
   rankGarments,
 } from "@/lib/collaborative-filter";
 import { parsePreferenceVector } from "@/lib/garment-interactions";
+import { resolveGarmentImageSource } from "@/lib/garment-image";
+import { parseJson } from "@/lib/utils";
 import { SkinPassport, LabColor } from "@/types";
 
 export async function GET(_req: NextRequest) {
@@ -43,7 +45,7 @@ export async function GET(_req: NextRequest) {
         where: {
           OR: [
             { ownerUserId: userId!, source: "user_upload" },
-            { ownerUserId: null, source: "catalog" },
+            { ownerUserId: null, source: "catalog", availability: "InStock" },
           ],
         },
         select: {
@@ -55,6 +57,12 @@ export async function GET(_req: NextRequest) {
           imageData: true,
           imageUrl: true,
           source: true,
+          brand: true,
+          productUrl: true,
+          price: true,
+          currency: true,
+          availability: true,
+          catalogAttributes: true,
         },
       }),
     ]);
@@ -63,19 +71,43 @@ export async function GET(_req: NextRequest) {
     const candidates = visibleGarments.flatMap((garment) => {
       if (seenGarments.has(garment.id)) return [];
       if (!["top", "bottom", "dress", "outerwear"].includes(garment.category)) return [];
+      const image = resolveGarmentImageSource(garment.imageData, garment.imageUrl);
+      if (!image) return [];
       try {
         const lab = JSON.parse(garment.colorLab) as LabColor;
-        const attributes: GarmentAttributes = { category: garment.category, lab };
+        const facets = parseJson<{
+          tone?: string | null;
+          silhouette?: string | null;
+          formality?: string | null;
+          style?: string | null;
+          texture?: string | null;
+        }>(garment.catalogAttributes);
+        const attributes: GarmentAttributes = {
+          category: garment.category,
+          lab,
+          tone: facets?.tone,
+          silhouette: facets?.silhouette,
+          formality: facets?.formality,
+          style: facets?.style,
+          texture: facets?.texture,
+        };
         return [{
           id: garment.id,
           attributes,
           skinColorScore: scoreGarmentColor(passport.skinLab, lab).score,
           name: garment.name,
           colorHex: garment.colorHex,
-          imageUrl: garment.imageData ?? garment.imageUrl,
+          imageUrl: image.imageData ?? image.imageUrl,
           source: garment.source,
+          brand: garment.brand,
+          productUrl: garment.productUrl,
+          price: garment.price,
+          currency: garment.currency,
+          availability: garment.availability,
+          catalogAttributes: garment.catalogAttributes,
         }];
-      } catch {
+      } catch (err) {
+        console.warn("[garment-recommendations] skipping garment with invalid stored attributes", garment.id, err);
         return [];
       }
     });
@@ -94,6 +126,14 @@ export async function GET(_req: NextRequest) {
           colorHex: candidate.colorHex,
           imageUrl: candidate.imageUrl,
           source: candidate.source,
+          brand: candidate.brand,
+          productUrl: candidate.productUrl,
+          price: candidate.price,
+          currency: candidate.currency,
+          availability: candidate.availability,
+          attributes: candidate.catalogAttributes
+            ? JSON.parse(candidate.catalogAttributes)
+            : null,
           predictedSatisfaction: rankedGarment.predictedSatisfaction,
           skinColorScore: rankedGarment.skinColorScore,
           userPreferenceScore: rankedGarment.userPreferenceScore,

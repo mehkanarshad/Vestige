@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/client";
 import {
   buildPreferenceVector,
+  GARMENT_ATTRIBUTE_COUNT,
   GARMENT_ATTRIBUTE_VERSION,
   GarmentFeedbackSignal,
 } from "@/lib/collaborative-filter";
@@ -13,7 +14,7 @@ export async function recomputeGarmentPreferences(userId: string) {
     select: {
       action: true,
       createdAt: true,
-      garment: { select: { category: true, colorLab: true } },
+      garment: { select: { category: true, colorLab: true, catalogAttributes: true } },
     },
   });
 
@@ -27,9 +28,20 @@ export async function recomputeGarmentPreferences(userId: string) {
     }
     try {
       const lab = JSON.parse(interaction.garment.colorLab) as LabColor;
+      const catalogAttributes = interaction.garment.catalogAttributes
+        ? JSON.parse(interaction.garment.catalogAttributes)
+        : {};
       return [{
         action: interaction.action,
-        attributes: { category: interaction.garment.category, lab },
+        attributes: {
+          category: interaction.garment.category,
+          lab,
+          tone: catalogAttributes.tone,
+          silhouette: catalogAttributes.silhouette,
+          formality: catalogAttributes.formality,
+          style: catalogAttributes.style,
+          texture: catalogAttributes.texture,
+        },
         createdAt: interaction.createdAt,
       }];
     } catch {
@@ -61,12 +73,18 @@ export function parsePreferenceVector(value: string | null) {
   try {
     const parsed = JSON.parse(value);
     if (
-      parsed?.version === GARMENT_ATTRIBUTE_VERSION &&
+      (parsed?.version === 1 || parsed?.version === GARMENT_ATTRIBUTE_VERSION) &&
       Array.isArray(parsed.values) &&
-      parsed.values.length === 9 &&
+      (parsed.values.length === 9 || parsed.values.length === GARMENT_ATTRIBUTE_COUNT) &&
       parsed.values.every((item: unknown) => typeof item === "number" && Number.isFinite(item))
     ) {
-      return parsed as ReturnType<typeof buildPreferenceVector>;
+      return {
+        ...parsed,
+        version: GARMENT_ATTRIBUTE_VERSION,
+        values: parsed.values.length === 9
+          ? [...parsed.values, ...Array<number>(GARMENT_ATTRIBUTE_COUNT - 9).fill(0)]
+          : parsed.values,
+      } as ReturnType<typeof buildPreferenceVector>;
     }
   } catch {
     return null;

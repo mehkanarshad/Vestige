@@ -90,7 +90,7 @@ export default function RecommendStep() {
         <div className="flex items-start justify-between mt-6">
           <div>
             <h1 className="display-md text-vestige-ink mb-2">
-              Your outfits
+              Catalog picks
             </h1>
             {intention && (
               <p className="body-lg text-sm">
@@ -98,7 +98,7 @@ export default function RecommendStep() {
                 <span className="text-vestige-espresso font-medium">
                   {capitalize(intention)}
                 </span>{" "}
-                intention — personalised to your skin profile and style history.
+                intention — ranked from real products using color compatibility and your saved garment preferences.
               </p>
             )}
           </div>
@@ -121,10 +121,10 @@ export default function RecommendStep() {
           <Spinner className="h-7 w-7 text-vestige-bark" />
           <div className="text-center">
             <p className="font-serif text-xl text-vestige-ink mb-1">
-              Consulting your stylist…
+              Searching the catalog…
             </p>
             <p className="font-sans text-xs text-vestige-stone">
-              Vestige is composing three outfits around your skin analysis and style history.
+              Finding in-stock products that match your style intention and skin-color profile.
             </p>
           </div>
         </div>
@@ -156,6 +156,17 @@ export default function RecommendStep() {
         </div>
       )}
 
+      {!loading && selected?.items[0]?.productUrl && (
+        <a
+          href={selected.items[0].productUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex text-sm font-medium text-vestige-espresso underline underline-offset-4"
+        >
+          View product at {selected.items[0].brand ?? "retailer"}
+        </a>
+      )}
+
       {/* Continue */}
       {!loading && selected && (
         <button
@@ -170,7 +181,7 @@ export default function RecommendStep() {
             </>
           ) : (
             <>
-              Try on &ldquo;{selected.name}&rdquo;
+              Continue to try-on
               <ArrowRight className="h-4 w-4" />
             </>
           )}

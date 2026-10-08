@@ -176,15 +176,15 @@ export default async function StylingSessionPage() {
               },
               {
                 step: "Understand",
-                body: "Your skin analysis is stored. Together with your intention and style history, it becomes the brief your AI stylist works from.",
+                body: "Your skin analysis is stored. Together with your intention and garment feedback, it helps rank real products from the catalog.",
               },
               {
                 step: "Discover",
-                body: "Three curated outfits. Each chosen because of your specific profile — not a model, not a trend, not a guess.",
+                body: "Catalog products ranked for your profile, color compatibility, and saved garment preferences — each tied to a real product image and retailer.",
               },
               {
                 step: "Try",
-                body: "Virtual try-on composites your selected outfit onto your photo. You see yourself in the look before deciding.",
+                body: "Try on one ranked catalog garment or upload another piece. Virtual try-on renders one garment at a time.",
               },
               {
                 step: "Refine",

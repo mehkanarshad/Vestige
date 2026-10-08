@@ -33,7 +33,7 @@ model Session {
   skinSummary     String?    // JSON string — our structured extraction
   // Step 3 — intention
   intention       String?
-  // Step 4 — AI recommendations
+  // Step 4 — catalog recommendations
   recommendations String?    // JSON string — array of OutfitRecommendation
   // Step 5 — try-on
   selectedOutfit  String?    // JSON string — chosen outfit
@@ -68,12 +68,19 @@ model Garment {
   colorHex     String
   colorLab     String   // JSON-encoded LabColor
   colorConfidence Float?
+  brand        String?
+  description  String?
+  productUrl   String?
+  price        Float?
+  currency     String?
+  availability String?
+  catalogAttributes String? // JSON-encoded Channel3 facets and source attributes
   createdAt    DateTime @default(now())
   sessions     Session[]
   interactions GarmentInteraction[]
 
   @@index([ownerUserId, source])
-  @@index([externalId])
+  @@unique([source, externalId])
 }
 
 model GarmentInteraction {

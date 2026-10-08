@@ -21,6 +21,10 @@ interface RankedGarmentSuggestion {
   neighborCount: number;
 }
 
+function isTryOnCategory(category: string): category is RankedGarmentSuggestion["category"] {
+  return ["top", "bottom", "dress", "outerwear"].includes(category);
+}
+
 export default function TryOnStep() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -78,9 +82,12 @@ export default function TryOnStep() {
       .then((session) => {
         if (cancelled) return;
         const sessionRecommendations = session.recommendations ?? recommendations;
-        const outfit = session.selectedOutfit ?? selectedOutfit ?? sessionRecommendations[0] ?? null;
+        const outfit: OutfitRecommendation | null =
+          session.selectedOutfit ?? selectedOutfit ?? sessionRecommendations[0] ?? null;
         setActiveOutfit(outfit);
         if (outfit) setSelectedOutfit(outfit);
+        const recommendedItem = outfit?.items.find((item) => item.colorHex);
+        if (recommendedItem?.colorHex) setGarmentColorHex(recommendedItem.colorHex);
         setSavedPhotoUrl(session.photoUrl ?? null);
         if (session.tryOnImageUrl) setTryOnImageUrl(session.tryOnImageUrl);
         if (session.tryOnGarmentColor) setGarmentColorHex(session.tryOnGarmentColor);
@@ -343,6 +350,25 @@ export default function TryOnStep() {
   }
 
   const displayUrl = tryOnImageUrl || savedPhotoUrl || photoPreview;
+  const recommendedItem = activeOutfit?.items.find(
+    (item) => item.garmentId && item.colorHex && item.garmentImageUrl && isTryOnCategory(item.category)
+  );
+  const recommendedCandidate = recommendedItem?.garmentId &&
+    recommendedItem.colorHex &&
+    recommendedItem.garmentImageUrl &&
+    isTryOnCategory(recommendedItem.category)
+    ? {
+        garmentId: recommendedItem.garmentId,
+        name: recommendedItem.name,
+        category: recommendedItem.category,
+        colorHex: recommendedItem.colorHex,
+        imageUrl: recommendedItem.garmentImageUrl,
+        predictedSatisfaction: Math.round((activeOutfit?.confidence ?? 0) * 100),
+        skinColorScore: Math.round((activeOutfit?.confidence ?? 0) * 100),
+        collaborativeScore: null,
+        neighborCount: 0,
+      }
+    : undefined;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -352,7 +378,7 @@ export default function TryOnStep() {
           Try it on
         </h1>
         <p className="body-lg text-sm">
-          Use a recommendation for styling direction, then upload any garment you want to see on yourself.
+          Try on one garment at a time using an upload or a suggested wardrobe piece. Your outfit recommendation is styling guidance; the full outfit is not rendered.
         </p>
       </div>
 
@@ -404,7 +430,7 @@ export default function TryOnStep() {
               <div>
                 <p className="caption mb-1">Your garment</p>
                 <p className="font-sans text-xs text-vestige-bark">
-                  Upload a product photo of any piece you are considering.
+                  Try a ranked catalog pick or upload any piece you are considering.
                 </p>
               </div>
               <input
@@ -474,10 +500,21 @@ export default function TryOnStep() {
                 >
                   <option value="top">Top or shirt</option>
                   <option value="bottom">Bottom</option>
-                  <option value="dress">Dress or full outfit</option>
+                  <option value="dress">Dress</option>
                   <option value="outerwear">Jacket or coat</option>
                 </select>
               </label>
+              {recommendedCandidate && (
+                <button
+                  type="button"
+                  onClick={() => triggerTryOn(recommendedCandidate)}
+                  disabled={loading || hydrating || scoring}
+                  className="btn-accent gap-2 text-sm"
+                >
+                  {loading ? <Spinner className="h-4 w-4" /> : <Shirt className="h-4 w-4" />}
+                  Try recommended piece on
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => triggerTryOn()}

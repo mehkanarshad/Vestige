@@ -7,6 +7,7 @@ import { z } from "zod";
 import sharp from "sharp";
 import { estimateGarmentColor } from "@/lib/garment-color";
 import { scoreGarmentColor, hexToLab } from "@/lib/color-science";
+import { resolveGarmentImageSource } from "@/lib/garment-image";
 import { SkinPassport } from "@/types";
 import { createHash } from "node:crypto";
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     let normalizedGarment: Buffer | null = null;
     let garmentImageUrl: string | undefined;
-    let savedImageData = selectedGarmentRecord?.imageData ?? null;
+    let savedImageData: string | null = null;
     if (garmentFile) {
       const sourceGarment = Buffer.from(await garmentFile.arrayBuffer());
       const garmentMetadata = await sharp(sourceGarment).metadata();
@@ -128,15 +129,21 @@ export async function POST(req: NextRequest) {
         .jpeg({ quality: 90 })
         .toBuffer();
     } else if (selectedGarmentRecord) {
-      const savedImage = /^data:image\/jpeg;base64,([\s\S]+)$/.exec(
-        selectedGarmentRecord.imageData ?? ""
+      const image = resolveGarmentImageSource(
+        selectedGarmentRecord.imageData,
+        selectedGarmentRecord.imageUrl
       );
-      if (savedImage) {
-        normalizedGarment = Buffer.from(savedImage[1], "base64");
-      } else if (selectedGarmentRecord.imageUrl) {
-        garmentImageUrl = selectedGarmentRecord.imageUrl;
-      } else {
+      if (!image) {
         return NextResponse.json({ error: "This garment has no renderable image" }, { status: 400 });
+      }
+      if (image.imageData) {
+        const savedImage = /^data:image\/jpeg;base64,([\s\S]+)$/.exec(image.imageData);
+        if (!savedImage) {
+          return NextResponse.json({ error: "This garment has no renderable image" }, { status: 400 });
+        }
+        normalizedGarment = Buffer.from(savedImage[1], "base64");
+      } else {
+        garmentImageUrl = image.imageUrl;
       }
     } else {
       const savedGarment = /^data:image\/jpeg;base64,([\s\S]+)$/.exec(
@@ -193,7 +200,7 @@ export async function POST(req: NextRequest) {
         },
       });
     }
-    const storedImage = garmentRecord.imageData ?? garmentRecord.imageUrl ?? savedImageData;
+    const storedImage = garmentImageUrl ?? savedImageData ?? garmentRecord.imageUrl ?? garmentRecord.imageData;
     if (!storedImage) {
       return NextResponse.json({ error: "Garment image is unavailable" }, { status: 400 });
     }

@@ -23,9 +23,13 @@ export async function POST(req: NextRequest) {
 
     const garment = await prisma.garment.findUnique({
       where: { id: session.tryOnGarmentId },
-      select: { id: true, ownerUserId: true },
+      select: { id: true, ownerUserId: true, source: true },
     });
-    if (!garment || garment.ownerUserId !== userId) {
+    if (
+      !garment ||
+      (garment.ownerUserId !== userId &&
+        !(garment.source === "catalog" && garment.ownerUserId === null))
+    ) {
       return NextResponse.json({ error: "Garment not found" }, { status: 404 });
     }
 
