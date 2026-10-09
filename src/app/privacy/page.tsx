@@ -51,15 +51,18 @@ export default function PrivacyPage() {
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Photos.</strong>{" "}
-            Your first portrait is sent to YouCam for skin analysis. For each try-on,
-            the session portrait and selected garment are sent to YouCam for rendering.
-            The normalized portrait, uploaded garment image, and generated try-on are
-            stored with the session so you can revisit the result and continue styling.
+            The portrait you upload for each session is sent to YouCam for a fresh skin
+            analysis and, if you use try-on, the session portrait and selected garment
+            are sent for rendering. The normalized portrait, uploaded garment image, and
+            generated try-on are stored with the session so you can revisit the result
+            and continue styling.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Skin analysis results.</strong>{" "}
-            YouCam's facial skin-color result and skin-concern scores are stored with your
-            session and style profile. YouCam does not return an undertone result.
+            Each session's YouCam skin-concern estimates are stored with that session and
+            compared with your previous fresh analysis. Your first facial skin-color
+            result is saved in your Skin Passport for styling. YouCam does not return an
+            undertone result.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Session data.</strong>{" "}

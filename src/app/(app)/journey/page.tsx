@@ -11,6 +11,7 @@ import {
   StyleEvolutionEntry,
 } from "@/types";
 import { ArrowRight } from "lucide-react";
+import { compareSkinAnalyses, hasFreshSkinAnalysis } from "@/lib/skin-trends";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function JourneyPage() {
         intention: true,
         selectedOutfit: true,
         skinSummary: true,
+        skinAnalysisRaw: true,
         tryOnGarmentName: true,
         tryOnColorScore: true,
         feedback: {
@@ -74,6 +76,24 @@ export default async function JourneyPage() {
     summary:     e.summary,
     traits:      parseJson<StyleProfileData>(e.traits) ?? (profile as StyleProfileData),
   }));
+
+  const skinComparisons = new Map<
+    string,
+    ReturnType<typeof compareSkinAnalyses>
+  >();
+  let previousSkin: { summary: SkinSummary; capturedAt: Date } | null = null;
+  for (const entry of [...sessions].reverse()) {
+    if (!hasFreshSkinAnalysis(entry.skinAnalysisRaw)) continue;
+    const summary = parseJson<SkinSummary>(entry.skinSummary);
+    if (!summary) continue;
+    if (previousSkin) {
+      skinComparisons.set(
+        entry.id,
+        compareSkinAnalyses(summary, previousSkin.summary, previousSkin.capturedAt)
+      );
+    }
+    previousSkin = { summary, capturedAt: entry.createdAt };
+  }
 
   if (sessions.length === 0) {
     return (
@@ -148,6 +168,7 @@ export default async function JourneyPage() {
                 const skin    = parseJson<SkinSummary>(s.skinSummary ?? null);
                 const fb      = s.feedback[0];
                 const garmentReaction = s.garmentInteractions[0];
+                const skinComparison = skinComparisons.get(s.id);
                 const isFirst = idx === 0;
 
                 return (
@@ -219,6 +240,26 @@ export default async function JourneyPage() {
                         </span>
                       )}
                     </div>
+
+                    {skinComparison && skinComparison.changes.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {skinComparison.changes.map((change) => {
+                          const delta = change.deltaPercentagePoints;
+                          return (
+                            <span
+                              key={change.key}
+                              className="rounded-sm bg-vestige-sand/60 px-2 py-1 font-sans text-[11px] text-vestige-bark"
+                              title={`${change.label}: ${delta > 0 ? "higher" : delta < 0 ? "lower" : "unchanged"} automated estimate compared with the previous fresh analysis`}
+                            >
+                              {change.label} {delta > 0 ? "+" : ""}{delta.toFixed(1)} pp
+                            </span>
+                          );
+                        })}
+                        <span className="self-center font-sans text-[10px] text-vestige-stone">
+                          vs previous analysis
+                        </span>
+                      </div>
+                    )}
 
                     {/* Colour trace — the outfit's palette shown as a row of dots */}
                     {outfit?.colorPalette && outfit.colorPalette.length > 0 && (

@@ -16,6 +16,19 @@ export interface SkinSummary {
   rawAttributes: Record<string, number>;
 }
 
+export interface SkinConcernChange {
+  key: string;
+  label: string;
+  previousScore: number;
+  currentScore: number;
+  deltaPercentagePoints: number;
+}
+
+export interface SkinAnalysisComparison {
+  previousCapturedAt: string;
+  changes: SkinConcernChange[];
+}
+
 export interface LabColor {
   l: number;
   a: number;

@@ -3,8 +3,10 @@ import { requireAuth } from "@/lib/session-guard";
 import { analyzeSkin } from "@/lib/youcam";
 import { YouCamApiError } from "@/lib/youcam/client";
 import { prisma } from "@/lib/db/client";
-import { saveSkinPassport, summaryFromSkinPassport } from "@/lib/skin-passport";
-import { SkinPassport, SkinSummary, SkinAnalysisRaw } from "@/types";
+import { saveSkinPassport } from "@/lib/skin-passport";
+import { SkinAnalysisRaw, SkinSummary } from "@/types";
+import { compareSkinAnalyses, hasFreshSkinAnalysis } from "@/lib/skin-trends";
+import { parseJson } from "@/lib/utils";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
@@ -16,9 +18,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
-    const sessionId = formData.get("sessionId") as string | null;
+    const sessionIdValue = formData.get("sessionId");
+    const sessionId = typeof sessionIdValue === "string" ? sessionIdValue : null;
     const file = formData.get("photo") as File | null;
 
+    if (!sessionId) {
+      return NextResponse.json({ error: "A session ID is required" }, { status: 400 });
+    }
     if (!file) {
       return NextResponse.json({ error: "No photo provided" }, { status: 400 });
     }
@@ -49,47 +55,49 @@ export async function POST(req: NextRequest) {
       .jpeg({ quality: 88 })
       .toBuffer();
 
-    const profile = await prisma.styleProfile.findUnique({ where: { userId: userId! } });
-    const passport = profile?.skinPassport
-      ? (JSON.parse(profile.skinPassport) as SkinPassport)
-      : null;
-
-    let raw: SkinAnalysisRaw;
-    let summary: SkinSummary;
-    if (passport?.skinLab) {
-      summary = summaryFromSkinPassport(passport);
-      raw = {
-        skinAnalysis: { source: "stored_skin_passport" },
-        facialColorAnalysis: { source: "stored_skin_passport" },
-      };
-    } else {
-      const analysis = await analyzeSkin({ image });
-      raw = analysis.raw;
-      summary = analysis.summary;
-      await saveSkinPassport(userId!, summary);
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    if (!session || session.userId !== userId) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
+
+    const previousSessions = await prisma.session.findMany({
+      where: {
+        userId: userId!,
+        id: { not: sessionId },
+        createdAt: { lt: session.createdAt },
+        completedStep: { gte: 2 },
+        skinAnalysisRaw: { not: null },
+        skinSummary: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, skinAnalysisRaw: true, skinSummary: true },
+    });
+    const previousSession = previousSessions.find((candidate) =>
+      hasFreshSkinAnalysis(candidate.skinAnalysisRaw)
+    );
+
+    const analysis = await analyzeSkin({ image });
+    const raw: SkinAnalysisRaw = analysis.raw;
+    const summary: SkinSummary = analysis.summary;
+    await saveSkinPassport(userId!, summary);
+    const previousSummary = parseJson<SkinSummary>(previousSession?.skinSummary ?? null);
+    const comparison = previousSummary
+      ? compareSkinAnalyses(summary, previousSummary, previousSession!.createdAt)
+      : null;
 
     const photoDataUrl = `data:image/jpeg;base64,${image.toString("base64")}`;
 
-    // Persist to session if sessionId provided
-    if (sessionId) {
-      const session = await prisma.session.findUnique({
-        where: { id: sessionId },
-      });
-      if (session && session.userId === userId) {
-        await prisma.session.update({
-          where: { id: sessionId },
-          data: {
-            photoUrl: photoDataUrl,
-            skinAnalysisRaw: JSON.stringify(raw),
-            skinSummary: JSON.stringify(summary),
-            completedStep: Math.max(session.completedStep, 2),
-          },
-        });
-      }
-    }
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        photoUrl: photoDataUrl,
+        skinAnalysisRaw: JSON.stringify(raw),
+        skinSummary: JSON.stringify(summary),
+        completedStep: Math.max(session.completedStep, 2),
+      },
+    });
 
-    return NextResponse.json({ summary, sessionId });
+    return NextResponse.json({ summary, sessionId, comparison });
   } catch (err) {
     if (err instanceof YouCamApiError) {
       return NextResponse.json(

@@ -1,7 +1,12 @@
 "use client";
 
 import { create } from "zustand";
-import { SkinSummary, OutfitRecommendation, StyleIntention } from "@/types";
+import {
+  SkinAnalysisComparison,
+  SkinSummary,
+  OutfitRecommendation,
+  StyleIntention,
+} from "@/types";
 
 export interface TryOnGarment {
   garmentId: string;
@@ -15,6 +20,7 @@ interface SessionStore {
   photoFile: File | null;
   photoPreview: string | null;
   skinSummary: SkinSummary | null;
+  skinComparison: SkinAnalysisComparison | null;
   intention: StyleIntention | null;
   recommendations: OutfitRecommendation[];
   selectedOutfit: OutfitRecommendation | null;
@@ -24,6 +30,7 @@ interface SessionStore {
   setSessionId: (id: string) => void;
   setPhoto: (file: File, preview: string) => void;
   setSkinSummary: (s: SkinSummary) => void;
+  setSkinComparison: (comparison: SkinAnalysisComparison | null) => void;
   setIntention: (i: StyleIntention) => void;
   setRecommendations: (r: OutfitRecommendation[]) => void;
   setSelectedOutfit: (o: OutfitRecommendation) => void;
@@ -37,6 +44,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   photoFile: null,
   photoPreview: null,
   skinSummary: null,
+  skinComparison: null,
   intention: null,
   recommendations: [],
   selectedOutfit: null,
@@ -46,6 +54,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setSessionId: (id) => set({ sessionId: id }),
   setPhoto: (file, preview) => set({ photoFile: file, photoPreview: preview }),
   setSkinSummary: (s) => set({ skinSummary: s }),
+  setSkinComparison: (comparison) => set({ skinComparison: comparison }),
   setIntention: (i) => set({ intention: i }),
   setRecommendations: (r) => set({ recommendations: r }),
   setSelectedOutfit: (o) => set({ selectedOutfit: o }),
@@ -57,6 +66,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
       photoFile: null,
       photoPreview: null,
       skinSummary: null,
+      skinComparison: null,
       intention: null,
       recommendations: [],
       selectedOutfit: null,

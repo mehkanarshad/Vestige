@@ -7,11 +7,12 @@ import { ArrowRight } from "lucide-react";
 import { useSessionStore } from "@/lib/session-store";
 import { StepIndicator } from "@/components/session/step-indicator";
 import { SkinSummaryCard } from "@/components/session/skin-summary-card";
+import { SkinChangeCard } from "@/components/session/skin-change-card";
 
 export default function AnalysisStep() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { skinSummary, photoPreview } = useSessionStore();
+  const { skinSummary, skinComparison, photoPreview } = useSessionStore();
 
   // Guard: if no analysis data, go back to photo step
   useEffect(() => {
@@ -30,8 +31,8 @@ export default function AnalysisStep() {
           Your skin analysis
         </h1>
         <p className="body-lg text-sm">
-          Vestige has read your complexion. These insights inform every colour
-          and texture choice in your recommendations.
+          Each session creates a fresh skin-concern estimate. Your saved Skin
+          Passport continues to inform complexion-aware colour recommendations.
         </p>
       </div>
 
@@ -55,15 +56,7 @@ export default function AnalysisStep() {
         </div>
       </div>
 
-      <div className="mt-8 p-4 bg-vestige-sand/30 rounded-lg border border-vestige-sand">
-        <p className="font-sans text-xs text-vestige-bark leading-relaxed">
-          <span className="font-medium text-vestige-espresso">
-            Stored in your style history.
-          </span>{" "}
-          Vestige tracks how your skin changes across sessions. Over time, this
-          creates a richer picture of your complexion and how to dress for it.
-        </p>
-      </div>
+      <SkinChangeCard comparison={skinComparison} />
 
       <button
         onClick={() => router.push(`/session/${id}/intention`)}

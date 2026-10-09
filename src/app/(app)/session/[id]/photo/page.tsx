@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 export default function PhotoStep() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { setPhoto, setSkinSummary, setSessionId, photoPreview } =
+  const { setPhoto, setSkinSummary, setSkinComparison, setSessionId, photoPreview } =
     useSessionStore();
 
   const [dragging, setDragging] = useState(false);
@@ -74,9 +74,10 @@ export default function PhotoStep() {
         throw new Error(d.error ?? "Analysis failed");
       }
 
-      const { summary } = await res.json();
+      const { summary, comparison } = await res.json();
       setPhoto(localFile, localPreview!);
       setSkinSummary(summary);
+      setSkinComparison(comparison ?? null);
 
       router.push(`/session/${sessionId}/analysis`);
     } catch (err: unknown) {
@@ -95,7 +96,7 @@ export default function PhotoStep() {
           A clear picture. <span className="text-vestige-bark">A more personal style.</span>
         </h1>
         <p className="t-body-md max-w-xl">
-          Your first skin analysis creates a saved Skin Passport. Later sessions reuse that profile; the session portrait is still used for garment try-on. Choose an evenly lit, face-forward photo with your shoulders visible.
+          Each session photo is analysed for skin-concern estimates. Your first analysis also creates a saved Skin Passport for styling; later analyses let you compare scores over time. Choose an evenly lit, face-forward photo with your shoulders visible.
         </p>
       </div>
 
