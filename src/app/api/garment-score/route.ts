@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/session-guard";
 import { prisma } from "@/lib/db/client";
 import { estimateGarmentColor } from "@/lib/garment-color";
 import { deltaE2000, hexToLab, scoreGarmentColor } from "@/lib/color-science";
+import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import { SkinPassport } from "@/types";
 
 export const runtime = "nodejs";
@@ -26,11 +27,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Garment photo must be smaller than 10 MB" }, { status: 400 });
     }
 
-    const profile = await prisma.styleProfile.findUnique({ where: { userId: userId! } });
+    const [profile, skinHistory] = await Promise.all([
+      prisma.styleProfile.findUnique({ where: { userId: userId! } }),
+      loadSkinAnalysisHistory(userId!),
+    ]);
     const passport = profile?.skinPassport
       ? (JSON.parse(profile.skinPassport) as SkinPassport)
       : null;
-    if (!passport?.skinLab) {
+    const skinLab = [...skinHistory]
+      .reverse()
+      .find((analysis) => analysis.summary.skinLab)?.summary.skinLab ?? passport?.skinLab;
+    if (!skinLab) {
       return NextResponse.json(
         { error: "Complete your skin analysis to create your Skin Passport first" },
         { status: 409 }
@@ -52,7 +59,7 @@ export async function POST(req: NextRequest) {
         ? colorOverride.toLowerCase()
         : estimate.hex;
     const garmentLab = hexToLab(garmentColorHex);
-    const match = scoreGarmentColor(passport.skinLab, garmentLab);
+    const match = scoreGarmentColor(skinLab, garmentLab);
 
     return NextResponse.json({
       garmentColorHex,

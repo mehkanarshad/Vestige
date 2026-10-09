@@ -9,6 +9,7 @@ import {
 } from "@/lib/collaborative-filter";
 import { parsePreferenceVector } from "@/lib/garment-interactions";
 import { resolveGarmentImageSource } from "@/lib/garment-image";
+import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import { parseJson } from "@/lib/utils";
 import { SkinPassport, LabColor } from "@/types";
 
@@ -17,11 +18,17 @@ export async function GET(_req: NextRequest) {
   if (error) return error;
 
   try {
-    const profile = await prisma.styleProfile.findUnique({ where: { userId: userId! } });
+    const [profile, skinHistory] = await Promise.all([
+      prisma.styleProfile.findUnique({ where: { userId: userId! } }),
+      loadSkinAnalysisHistory(userId!),
+    ]);
     const passport = profile?.skinPassport
       ? (JSON.parse(profile.skinPassport) as SkinPassport)
       : null;
-    if (!passport?.skinLab) {
+    const skinLab = [...skinHistory]
+      .reverse()
+      .find((analysis) => analysis.summary.skinLab)?.summary.skinLab ?? passport?.skinLab;
+    if (!skinLab) {
       return NextResponse.json({ error: "Create your Skin Passport before ranking garments" }, { status: 409 });
     }
 
@@ -94,7 +101,7 @@ export async function GET(_req: NextRequest) {
         return [{
           id: garment.id,
           attributes,
-          skinColorScore: scoreGarmentColor(passport.skinLab, lab).score,
+          skinColorScore: scoreGarmentColor(skinLab, lab).score,
           name: garment.name,
           colorHex: garment.colorHex,
           imageUrl: image.imageData ?? image.imageUrl,

@@ -11,7 +11,8 @@ import {
   StyleEvolutionEntry,
 } from "@/types";
 import { ArrowRight } from "lucide-react";
-import { compareSkinAnalyses, hasFreshSkinAnalysis } from "@/lib/skin-trends";
+import { calculateSkinTrajectory, compareSkinAnalyses } from "@/lib/skin-trends";
+import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function JourneyPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
 
-  const [sessions, evolutionRows, profileRow] = await Promise.all([
+  const [sessions, evolutionRows, profileRow, skinHistory] = await Promise.all([
     prisma.session.findMany({
       where:   { userId: session.user.id, completedStep: { gte: 2 } },
       orderBy: { createdAt: "desc" },
@@ -38,7 +39,6 @@ export default async function JourneyPage() {
         intention: true,
         selectedOutfit: true,
         skinSummary: true,
-        skinAnalysisRaw: true,
         tryOnGarmentName: true,
         tryOnColorScore: true,
         feedback: {
@@ -58,6 +58,7 @@ export default async function JourneyPage() {
       orderBy: { snapshotAt: "asc" },
     }),
     prisma.styleProfile.findUnique({ where: { userId: session.user.id } }),
+    loadSkinAnalysisHistory(session.user.id),
   ]);
 
   const profile: StyleProfileData | null = profileRow ? {
@@ -81,18 +82,24 @@ export default async function JourneyPage() {
     string,
     ReturnType<typeof compareSkinAnalyses>
   >();
-  let previousSkin: { summary: SkinSummary; capturedAt: Date } | null = null;
-  for (const entry of [...sessions].reverse()) {
-    if (!hasFreshSkinAnalysis(entry.skinAnalysisRaw)) continue;
-    const summary = parseJson<SkinSummary>(entry.skinSummary);
-    if (!summary) continue;
-    if (previousSkin) {
-      skinComparisons.set(
-        entry.id,
-        compareSkinAnalyses(summary, previousSkin.summary, previousSkin.capturedAt)
-      );
-    }
-    previousSkin = { summary, capturedAt: entry.createdAt };
+  for (let index = 1; index < skinHistory.length; index += 1) {
+    const current = skinHistory[index];
+    const previous = skinHistory[index - 1];
+    const trajectory = calculateSkinTrajectory(
+      skinHistory.slice(0, index + 1).map(({ summary, capturedAt }) => ({
+        summary,
+        capturedAt,
+      }))
+    );
+    skinComparisons.set(current.sessionId, {
+      ...compareSkinAnalyses(
+        current.summary,
+        previous.summary,
+        previous.capturedAt,
+        current.capturedAt
+      ),
+      trajectory,
+    });
   }
 
   if (sessions.length === 0) {
@@ -241,22 +248,24 @@ export default async function JourneyPage() {
                       )}
                     </div>
 
-                    {skinComparison && skinComparison.changes.length > 0 && (
+                    {skinComparison && skinComparison.trajectory.length > 0 && (
                       <div className="mb-3 flex flex-wrap gap-2">
-                        {skinComparison.changes.map((change) => {
-                          const delta = change.deltaPercentagePoints;
+                        {skinComparison.trajectory.map((signal) => {
+                          const delta = signal.relativePercentageChange;
                           return (
                             <span
-                              key={change.key}
+                              key={signal.key}
                               className="rounded-sm bg-vestige-sand/60 px-2 py-1 font-sans text-[11px] text-vestige-bark"
-                              title={`${change.label}: ${delta > 0 ? "higher" : delta < 0 ? "lower" : "unchanged"} automated estimate compared with the previous fresh analysis`}
+                              title={`${signal.label}: ${delta === null ? `${signal.deltaPercentagePoints.toFixed(1)} percentage-point change` : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}% relative change`} across ${signal.observations.length} analyses. Automated estimate only.`}
                             >
-                              {change.label} {delta > 0 ? "+" : ""}{delta.toFixed(1)} pp
+                              {signal.label} {delta === null
+                                ? `${signal.deltaPercentagePoints > 0 ? "+" : ""}${signal.deltaPercentagePoints.toFixed(1)} pp`
+                                : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`}
                             </span>
                           );
                         })}
                         <span className="self-center font-sans text-[10px] text-vestige-stone">
-                          vs previous analysis
+                          trajectory from first analysis
                         </span>
                       </div>
                     )}

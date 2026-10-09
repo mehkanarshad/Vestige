@@ -10,6 +10,7 @@ import {
 } from "@/lib/collaborative-filter";
 import { parsePreferenceVector } from "@/lib/garment-interactions";
 import { ingestChannel3Catalog, Channel3CatalogError } from "@/lib/channel3-catalog";
+import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import { LabColor, OutfitRecommendation, SkinPassport, SkinSummary } from "@/types";
 import { z } from "zod";
 
@@ -53,9 +54,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const profile = await prisma.styleProfile.findUnique({ where: { userId: userId! } });
+    const [profile, skinHistory] = await Promise.all([
+      prisma.styleProfile.findUnique({ where: { userId: userId! } }),
+      loadSkinAnalysisHistory(userId!, session.createdAt),
+    ]);
     const passport = parseJson<SkinPassport>(profile?.skinPassport ?? null);
     const skinLab = skinSummary.skinLab ?? passport?.skinLab;
+    const previousSkinLab = [...skinHistory]
+      .reverse()
+      .find((analysis) => analysis.summary.skinLab)?.summary.skinLab;
     if (!skinLab) {
       return NextResponse.json(
         { error: "Complete your skin analysis before requesting catalog recommendations" },
@@ -85,6 +92,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     const seenGarments = new Set(ownedInteractions.map(({ garmentId }) => garmentId));
+    const previousSkinColorScores = new Map<string, number>();
     const candidates = catalogGarments.flatMap((garment) => {
       if (seenGarments.has(garment.id) || !garment.imageUrl || !garment.productUrl) return [];
       try {
@@ -105,10 +113,17 @@ export async function POST(req: NextRequest) {
           style: catalogAttributes?.style,
           texture: catalogAttributes?.texture,
         };
+        const skinColorScore = scoreGarmentColor(skinLab, lab).score;
+        if (previousSkinLab) {
+          previousSkinColorScores.set(
+            garment.id,
+            scoreGarmentColor(previousSkinLab, lab).score
+          );
+        }
         return [{
           id: garment.id,
           attributes,
-          skinColorScore: scoreGarmentColor(skinLab, lab).score,
+          skinColorScore,
         }];
       } catch (err) {
         console.warn("[recommendations] skipping catalog item with invalid stored attributes", garment.id, err);
@@ -135,6 +150,7 @@ export async function POST(req: NextRequest) {
         texture?: string | null;
         materials?: string[];
       }>(garment.catalogAttributes);
+      const previousSkinColorScore = previousSkinColorScores.get(garment.id);
       const item = {
         category: garment.category as "top" | "bottom" | "dress" | "outerwear",
         name: garment.name,
@@ -163,7 +179,12 @@ export async function POST(req: NextRequest) {
         items: [item],
         colorPalette: [garment.colorHex],
         intention,
-        personalizedReason: `Ranked ${rankedGarment.predictedSatisfaction}/100 for color compatibility and your garment preferences.`,
+        personalizedReason: [
+          `Ranked ${rankedGarment.predictedSatisfaction}/100 for color compatibility and your garment preferences.`,
+          typeof previousSkinColorScore === "number"
+            ? `Its skin-color match is ${rankedGarment.skinColorScore}/100, ${rankedGarment.skinColorScore > previousSkinColorScore ? "+" : ""}${rankedGarment.skinColorScore - previousSkinColorScore} points from the previous fresh color reading.`
+            : null,
+        ].filter(Boolean).join(" "),
         confidence: rankedGarment.predictedSatisfaction / 100,
       }];
     });

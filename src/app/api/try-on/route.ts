@@ -8,7 +8,8 @@ import sharp from "sharp";
 import { estimateGarmentColor } from "@/lib/garment-color";
 import { scoreGarmentColor, hexToLab } from "@/lib/color-science";
 import { resolveGarmentImageSource } from "@/lib/garment-image";
-import { SkinPassport } from "@/types";
+import { SkinPassport, SkinSummary } from "@/types";
+import { parseJson } from "@/lib/utils";
 import { createHash } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
     const passport = profile?.skinPassport
       ? (JSON.parse(profile.skinPassport) as SkinPassport)
       : null;
-    if (!passport?.skinLab) {
+    const skinLab = parseJson<SkinSummary>(session.skinSummary)?.skinLab ?? passport?.skinLab;
+    if (!skinLab) {
       return NextResponse.json(
         { error: "Complete your skin analysis to create your Skin Passport first" },
         { status: 409 }
@@ -162,7 +164,7 @@ export async function POST(req: NextRequest) {
     if (!selectedColor) {
       return NextResponse.json({ error: "Garment color is unavailable for scoring" }, { status: 400 });
     }
-    const colorMatch = scoreGarmentColor(passport.skinLab, hexToLab(selectedColor));
+    const colorMatch = scoreGarmentColor(skinLab, hexToLab(selectedColor));
 
     if (normalizedGarment) {
       savedImageData = `data:image/jpeg;base64,${normalizedGarment.toString("base64")}`;

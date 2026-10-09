@@ -5,8 +5,8 @@ import { YouCamApiError } from "@/lib/youcam/client";
 import { prisma } from "@/lib/db/client";
 import { saveSkinPassport } from "@/lib/skin-passport";
 import { SkinAnalysisRaw, SkinSummary } from "@/types";
-import { compareSkinAnalyses, hasFreshSkinAnalysis } from "@/lib/skin-trends";
-import { parseJson } from "@/lib/utils";
+import { calculateSkinTrajectory, compareSkinAnalyses } from "@/lib/skin-trends";
+import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
@@ -60,29 +60,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    const previousSessions = await prisma.session.findMany({
-      where: {
-        userId: userId!,
-        id: { not: sessionId },
-        createdAt: { lt: session.createdAt },
-        completedStep: { gte: 2 },
-        skinAnalysisRaw: { not: null },
-        skinSummary: { not: null },
-      },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true, skinAnalysisRaw: true, skinSummary: true },
-    });
-    const previousSession = previousSessions.find((candidate) =>
-      hasFreshSkinAnalysis(candidate.skinAnalysisRaw)
-    );
+    const skinHistory = await loadSkinAnalysisHistory(userId!, session.createdAt);
+    const previousSession = skinHistory.at(-1);
 
     const analysis = await analyzeSkin({ image });
     const raw: SkinAnalysisRaw = analysis.raw;
     const summary: SkinSummary = analysis.summary;
     await saveSkinPassport(userId!, summary);
-    const previousSummary = parseJson<SkinSummary>(previousSession?.skinSummary ?? null);
-    const comparison = previousSummary
-      ? compareSkinAnalyses(summary, previousSummary, previousSession!.createdAt)
+    const trajectory = calculateSkinTrajectory([
+      ...skinHistory.map(({ summary: prior, capturedAt }) => ({
+        summary: prior,
+        capturedAt,
+      })),
+      { summary, capturedAt: session.createdAt },
+    ]);
+    const comparison = previousSession
+      ? {
+          ...compareSkinAnalyses(
+          summary,
+          previousSession.summary,
+          previousSession.capturedAt,
+          session.createdAt
+          ),
+          trajectory,
+        }
       : null;
 
     const photoDataUrl = `data:image/jpeg;base64,${image.toString("base64")}`;

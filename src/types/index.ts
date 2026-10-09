@@ -22,11 +22,29 @@ export interface SkinConcernChange {
   previousScore: number;
   currentScore: number;
   deltaPercentagePoints: number;
+  relativePercentageChange: number | null;
+}
+
+export interface SkinTrendObservation {
+  capturedAt: string;
+  score: number;
+}
+
+export interface SkinTrendSignal {
+  key: string;
+  label: string;
+  firstScore: number;
+  previousScore: number;
+  currentScore: number;
+  deltaPercentagePoints: number;
+  relativePercentageChange: number | null;
+  observations: SkinTrendObservation[];
 }
 
 export interface SkinAnalysisComparison {
   previousCapturedAt: string;
   changes: SkinConcernChange[];
+  trajectory: SkinTrendSignal[];
 }
 
 export interface LabColor {
