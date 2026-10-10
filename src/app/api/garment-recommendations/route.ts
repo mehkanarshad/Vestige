@@ -1,33 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/session-guard";
 import { prisma } from "@/lib/db/client";
-import { hexToLab, scoreGarmentColor } from "@/lib/color-science";
+import { scoreGarmentColor } from "@/lib/color-science";
 import {
   buildPreferenceVector,
   GarmentAttributes,
   rankGarments,
+  scoreIntentionFit,
 } from "@/lib/collaborative-filter";
 import { parsePreferenceVector } from "@/lib/garment-interactions";
 import { resolveGarmentImageSource } from "@/lib/garment-image";
 import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import { parseJson } from "@/lib/utils";
-import { SkinPassport, LabColor } from "@/types";
+import { LabColor, SkinPassport, SkinSummary, StyleIntention } from "@/types";
+import { hasFreshSkinAnalysis } from "@/lib/skin-trends";
 
-export async function GET(_req: NextRequest) {
+const INTENTIONS = new Set<StyleIntention>([
+  "confident",
+  "calm",
+  "bold",
+  "professional",
+  "playful",
+  "minimal",
+  "experimental",
+]);
+
+export async function GET(req: NextRequest) {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
   try {
+    const sessionId = req.nextUrl.searchParams.get("sessionId");
+    const session = sessionId
+      ? await prisma.session.findUnique({ where: { id: sessionId } })
+      : null;
+    if (sessionId && (!session || session.userId !== userId)) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
     const [profile, skinHistory] = await Promise.all([
       prisma.styleProfile.findUnique({ where: { userId: userId! } }),
-      loadSkinAnalysisHistory(userId!),
+      loadSkinAnalysisHistory(userId!, session?.createdAt),
     ]);
     const passport = profile?.skinPassport
       ? (JSON.parse(profile.skinPassport) as SkinPassport)
       : null;
-    const skinLab = [...skinHistory]
-      .reverse()
-      .find((analysis) => analysis.summary.skinLab)?.summary.skinLab ?? passport?.skinLab;
+    const sessionSummary = session && hasFreshSkinAnalysis(session.skinAnalysisRaw)
+      ? parseJson<SkinSummary>(session.skinSummary)
+      : null;
+    const historicalSkinLabs = skinHistory.flatMap((analysis) =>
+      analysis.summary.skinLab ? [analysis.summary.skinLab] : []
+    );
+    const skinLab = sessionSummary?.skinLab
+      ?? historicalSkinLabs.at(-1)
+      ?? passport?.skinLab;
+    const recentSkinLabs = [
+      ...historicalSkinLabs,
+      ...(sessionSummary?.skinLab ? [sessionSummary.skinLab] : []),
+    ].slice(-3);
+    const intention = session && INTENTIONS.has(session.intention as StyleIntention)
+      ? session.intention as StyleIntention
+      : null;
     if (!skinLab) {
       return NextResponse.json({ error: "Create your Skin Passport before ranking garments" }, { status: 409 });
     }
@@ -98,10 +130,20 @@ export async function GET(_req: NextRequest) {
           style: facets?.style,
           texture: facets?.texture,
         };
+        const skinTrajectoryScore = recentSkinLabs.length >= 2
+          ? Math.round(
+              recentSkinLabs.reduce(
+                (sum, historicalLab) => sum + scoreGarmentColor(historicalLab, lab).score,
+                0
+              ) / recentSkinLabs.length
+            )
+          : null;
         return [{
           id: garment.id,
           attributes,
           skinColorScore: scoreGarmentColor(skinLab, lab).score,
+          skinTrajectoryScore,
+          ...(intention ? { intentionScore: scoreIntentionFit(intention, attributes) } : {}),
           name: garment.name,
           colorHex: garment.colorHex,
           imageUrl: image.imageData ?? image.imageUrl,
@@ -143,6 +185,8 @@ export async function GET(_req: NextRequest) {
             : null,
           predictedSatisfaction: rankedGarment.predictedSatisfaction,
           skinColorScore: rankedGarment.skinColorScore,
+          skinTrajectoryScore: rankedGarment.skinTrajectoryScore,
+          intentionScore: rankedGarment.intentionScore,
           userPreferenceScore: rankedGarment.userPreferenceScore,
           collaborativeScore: rankedGarment.collaborativeScore,
           neighborCount: rankedGarment.neighborCount,

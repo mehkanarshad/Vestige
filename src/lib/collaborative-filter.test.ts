@@ -6,6 +6,7 @@ import {
   normalizeGarmentFacet,
   pearsonCorrelation,
   rankGarments,
+  scoreIntentionFit,
 } from "./collaborative-filter";
 
 const blueTop = {
@@ -103,4 +104,61 @@ test("catalog facets are represented in the preference vector and affect ranking
   assert.equal(ranked[0].id, "matching-facets");
   assert.equal(normalizeGarmentFacet("formality", "Business Casual"), "business-casual");
   assert.equal(encodeGarmentAttributes(preferred).length, preference.values.length);
+});
+
+test("intention fit scores catalog facets against the selected emotional target", () => {
+  const professional = {
+    ...blueTop,
+    style: "professional",
+    silhouette: "tailored",
+    formality: "business-formal",
+  };
+  const playful = {
+    ...blueTop,
+    style: "romantic",
+    silhouette: "fit-and-flare",
+    texture: "lace",
+  };
+
+  assert.ok(scoreIntentionFit("professional", professional) >
+    scoreIntentionFit("professional", playful));
+  assert.ok(scoreIntentionFit("playful", playful) >
+    scoreIntentionFit("playful", professional));
+});
+
+test("rank combines current color, recent color trajectory, intention, and history", () => {
+  const intentionMatch = {
+    ...blueTop,
+    style: "professional",
+    silhouette: "tailored",
+    formality: "business-formal",
+  };
+  const mismatched = {
+    ...blueTop,
+    style: "streetwear",
+    silhouette: "oversized",
+    formality: "casual",
+  };
+  const ranked = rankGarments("user", buildPreferenceVector([]), [], [
+    {
+      id: "intention-match",
+      attributes: intentionMatch,
+      skinColorScore: 70,
+      skinTrajectoryScore: 75,
+      intentionScore: scoreIntentionFit("professional", intentionMatch),
+    },
+    {
+      id: "mismatch",
+      attributes: mismatched,
+      skinColorScore: 70,
+      skinTrajectoryScore: 75,
+      intentionScore: scoreIntentionFit("professional", mismatched),
+    },
+  ]);
+
+  assert.equal(ranked[0].id, "intention-match");
+  assert.ok(ranked[0].predictedSatisfaction > ranked[1].predictedSatisfaction);
+  assert.equal(ranked[0].predictedSatisfaction, 75);
+  assert.equal(ranked[0].skinTrajectoryScore, 75);
+  assert.equal(ranked[0].intentionScore, scoreIntentionFit("professional", intentionMatch));
 });

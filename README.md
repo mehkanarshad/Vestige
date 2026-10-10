@@ -82,22 +82,30 @@ assemble a complete outfit from multiple coordinated catalog products.
 The existing ranking pipeline is deterministic; GPT does not generate catalog
 items or their product details.
 
-1. Vestige reads the current session's fresh skin-color Lab value and the
-   user's saved garment-preference vector.
-2. The catalog products are scored for skin-color compatibility using the
-   existing color-science functions.
-3. User feedback on garments contributes preferences for category, color
-   coordinates, tone, silhouette, formality, style, and texture. Where enough
-   interaction history exists, preference vectors from other users contribute
-   a collaborative score.
-4. The existing `rankGarments` function blends skin-color compatibility,
-   personal preference, and collaborative signals according to available
-   interaction confidence, then sorts the candidates.
+1. Vestige reads the current session's fresh skin-color Lab value, up to two
+   preceding fresh Lab readings, the selected intention, and the user's saved
+   garment-preference vector.
+2. Each product gets a current skin-color compatibility score. With at least
+   two readings, it also gets an average compatibility score across the latest
+   three readings. This is the skin-color trajectory signal.
+3. The selected intention is scored against available normalized catalog
+   style, silhouette, formality, and texture facets, plus garment Lab chroma.
+   Target facets for each intention are defined in the deterministic scorer.
+   Channel3 search also includes the intention in each category query.
+4. User feedback on garments contributes preferences for category, color
+   coordinates, tone, silhouette, formality, style, and texture. Preference
+   vectors from other users contribute a collaborative score when enough
+   similar-user interaction history exists.
+5. `rankGarments` combines current color (35%), recent color trajectory (15%,
+   folded into current color when history is insufficient), intention fit
+   (20%), personal preference (20%), and collaborative preference (10%).
+   Personal/collaborative weights are scaled by interaction confidence;
+   available components are normalized before sorting.
 
-The recommendation API also compares product color-match scores against the
-previous fresh skin-color reading when one exists; it can describe the
-difference in the recommendation rationale. Concern changes such as redness or
-acne do **not** change clothing rankings: there is no validated mapping from
+The resulting score is a deterministic heuristic, not a trained model or a
+calibrated probability of satisfaction. Recommendation cards expose component
+scores so users can see why products ranked. Concern trajectories such as
+redness and acne remain informational; there is no validated mapping from
 those estimates to garment properties.
 
 The separate garment-recommendations endpoint ranks visible, untried catalog
@@ -110,8 +118,8 @@ Lab reading when available. It does not ingest Channel3 products itself.
   try-on.
 - YouCam Clothes Virtual Try-On receives one garment and the session portrait.
   The feature renders one garment at a time; it does not render a full outfit.
-- Vestige calculates a color-match score using the latest session Lab color
-  when available, falling back to the saved Skin Passport.
+- Vestige calculates a color-match score using the latest fresh session Lab
+  color when available, falling back to the saved Skin Passport.
 - Users can react to a rendered catalog garment with like, reject, or “more
   like this.” These garment interactions are stored and used to recompute the
   preference vector that influences later ranking.
@@ -123,9 +131,12 @@ Lab reading when available. It does not ingest Channel3 products itself.
 
 - The profile accumulates style signals from session feedback and shows a
   profile summary, intention counts, preferences, avoided styles, and colors.
-- If `OPENAI_API_KEY` is configured, OpenAI `gpt-4o-mini` writes a short style
-  summary from preference/profile text. Otherwise Vestige uses a local fallback
-  sentence. OpenAI is not used to select or generate products.
+- GPT does not generate recommendations. The only OpenAI call in the current
+  implementation is an optional style-profile summary using `gpt-4o-mini`,
+  made after session feedback when `OPENAI_API_KEY` is configured. Without the
+  key, Vestige uses a local fallback sentence. This is not GPT-4o outfit
+  generation. The code does not validate provider credentials at startup, so
+  a working key and live API call must be verified separately.
 - A Style Evolution snapshot is created when the profile's completed-session
   count reaches a multiple of five.
 - `/journey` is the canonical session timeline. The legacy `/history` route

@@ -160,7 +160,7 @@ export default async function StyleProfilePage() {
                 <div>
                   <p className="t-label text-vestige-stone mb-3">Skin Passport</p>
                   <p className="font-sans text-sm text-vestige-bark">
-                    Stored from your first analysis. Garment color scores use these Lab coordinates.
+                    Stored from your first analysis as a baseline. Fresh session color readings are used for garment scores when available.
                   </p>
                 </div>
                 <p className="t-label-sm text-vestige-stone">

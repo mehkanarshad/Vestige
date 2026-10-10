@@ -289,7 +289,9 @@ export default function TryOnStep() {
       if (!response.ok) throw new Error(result.error ?? "Could not save your feedback");
       setFeedbackAction(action);
 
-      const rankingResponse = await fetch("/api/garment-recommendations");
+      const rankingResponse = await fetch(
+        `/api/garment-recommendations?sessionId=${encodeURIComponent(id)}`
+      );
       const ranking = await rankingResponse.json();
       if (rankingResponse.ok) {
         const ranked: RankedGarmentSuggestion[] = ranking.recommendations ?? [];
@@ -572,7 +574,7 @@ export default function TryOnStep() {
                       </p>
                     )}
                     <p className="mt-1 font-sans text-[11px] text-vestige-stone">
-                      This color score uses your stored Skin Passport; skin concerns are retained separately for styling context.
+                      This color score uses this session&apos;s latest skin-color reading when available. Skin-concern trends remain informational.
                     </p>
                   </div>
                 )}

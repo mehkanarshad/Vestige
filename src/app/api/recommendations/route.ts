@@ -7,6 +7,7 @@ import {
   buildPreferenceVector,
   GarmentAttributes,
   rankGarments,
+  scoreIntentionFit,
 } from "@/lib/collaborative-filter";
 import { parsePreferenceVector } from "@/lib/garment-interactions";
 import { ingestChannel3Catalog, Channel3CatalogError } from "@/lib/channel3-catalog";
@@ -63,6 +64,12 @@ export async function POST(req: NextRequest) {
     const previousSkinLab = [...skinHistory]
       .reverse()
       .find((analysis) => analysis.summary.skinLab)?.summary.skinLab;
+    const recentSkinLabs = [
+      ...skinHistory.flatMap((analysis) =>
+        analysis.summary.skinLab ? [analysis.summary.skinLab] : []
+      ),
+      ...(skinSummary.skinLab ? [skinSummary.skinLab] : []),
+    ].slice(-3);
     if (!skinLab) {
       return NextResponse.json(
         { error: "Complete your skin analysis before requesting catalog recommendations" },
@@ -97,6 +104,11 @@ export async function POST(req: NextRequest) {
       if (seenGarments.has(garment.id) || !garment.imageUrl || !garment.productUrl) return [];
       try {
         const lab = JSON.parse(garment.colorLab) as LabColor;
+        if (
+          !Number.isFinite(lab.l) ||
+          !Number.isFinite(lab.a) ||
+          !Number.isFinite(lab.b)
+        ) return [];
         const catalogAttributes = parseJson<{
           tone?: string | null;
           silhouette?: string | null;
@@ -114,6 +126,14 @@ export async function POST(req: NextRequest) {
           texture: catalogAttributes?.texture,
         };
         const skinColorScore = scoreGarmentColor(skinLab, lab).score;
+        const skinTrajectoryScore = recentSkinLabs.length >= 2
+          ? Math.round(
+              recentSkinLabs.reduce(
+                (sum, historicalLab) => sum + scoreGarmentColor(historicalLab, lab).score,
+                0
+              ) / recentSkinLabs.length
+            )
+          : null;
         if (previousSkinLab) {
           previousSkinColorScores.set(
             garment.id,
@@ -124,6 +144,8 @@ export async function POST(req: NextRequest) {
           id: garment.id,
           attributes,
           skinColorScore,
+          skinTrajectoryScore,
+          intentionScore: scoreIntentionFit(intention, attributes),
         }];
       } catch (err) {
         console.warn("[recommendations] skipping catalog item with invalid stored attributes", garment.id, err);
@@ -180,7 +202,20 @@ export async function POST(req: NextRequest) {
         colorPalette: [garment.colorHex],
         intention,
         personalizedReason: [
-          `Ranked ${rankedGarment.predictedSatisfaction}/100 for color compatibility and your garment preferences.`,
+          `Predicted match ${rankedGarment.predictedSatisfaction}/100.`,
+          `Current color match ${rankedGarment.skinColorScore}/100.`,
+          typeof rankedGarment.skinTrajectoryScore === "number"
+            ? `Recent color-trajectory match ${rankedGarment.skinTrajectoryScore}/100.`
+            : null,
+          typeof rankedGarment.intentionScore === "number"
+            ? `${intention} intention fit ${rankedGarment.intentionScore}/100.`
+            : null,
+          currentPreferences.interactionCount > 0
+            ? `Your garment-preference score ${rankedGarment.userPreferenceScore}/100.`
+            : null,
+          rankedGarment.collaborativeScore !== null
+            ? `Similar-user score ${rankedGarment.collaborativeScore}/100.`
+            : null,
           typeof previousSkinColorScore === "number"
             ? `Its skin-color match is ${rankedGarment.skinColorScore}/100, ${rankedGarment.skinColorScore > previousSkinColorScore ? "+" : ""}${rankedGarment.skinColorScore - previousSkinColorScore} points from the previous fresh color reading.`
             : null,

@@ -1,4 +1,4 @@
-import { LabColor } from "@/types";
+import { LabColor, StyleIntention } from "@/types";
 
 export const GARMENT_ATTRIBUTE_VERSION = 2 as const;
 const CATEGORIES = ["top", "bottom", "dress", "outerwear", "shoes", "accessory"] as const;
@@ -28,6 +28,13 @@ export const GARMENT_ATTRIBUTE_COUNT =
   Object.values(FACET_VALUES).reduce((count, values) => count + values.length, 0);
 const ATTRIBUTE_COUNT = GARMENT_ATTRIBUTE_COUNT;
 const RECENCY_HALF_LIFE_DAYS = 180;
+const RECOMMENDATION_SCORE_WEIGHTS = {
+  currentSkinColor: 0.35,
+  skinColorTrajectory: 0.15,
+  intention: 0.2,
+  personalPreference: 0.2,
+  collaborativePreference: 0.1,
+} as const;
 
 export type GarmentFacet = keyof typeof FACET_VALUES;
 
@@ -63,6 +70,8 @@ export interface GarmentCandidate {
   id: string;
   attributes: GarmentAttributes;
   skinColorScore: number;
+  skinTrajectoryScore?: number | null;
+  intentionScore?: number | null;
 }
 
 export interface RankedGarment extends GarmentCandidate {
@@ -70,8 +79,89 @@ export interface RankedGarment extends GarmentCandidate {
   skinColorScore: number;
   userPreferenceScore: number;
   collaborativeScore: number | null;
+  skinTrajectoryScore: number | null;
+  intentionScore: number | null;
   neighborCount: number;
   neighborUserIds: string[];
+}
+
+const INTENTION_TARGETS: Record<
+  StyleIntention,
+  {
+    style?: string[];
+    silhouette?: string[];
+    formality?: string[];
+    texture?: string[];
+    chroma: [number, number];
+  }
+> = {
+  confident: {
+    style: ["modern", "professional", "edgy"],
+    silhouette: ["tailored", "fitted", "straight"],
+    formality: ["business-formal", "business-casual", "formal"],
+    chroma: [16, 38],
+  },
+  calm: {
+    style: ["relaxed", "minimalist"],
+    silhouette: ["relaxed", "oversized"],
+    texture: ["linen", "knit", "smooth"],
+    chroma: [0, 22],
+  },
+  bold: {
+    style: ["edgy", "streetwear", "modern"],
+    silhouette: ["cropped", "oversized", "boxy"],
+    chroma: [30, 128],
+  },
+  professional: {
+    style: ["professional", "classic"],
+    silhouette: ["tailored", "straight"],
+    formality: ["business-casual", "business-formal"],
+    chroma: [0, 28],
+  },
+  playful: {
+    style: ["bohemian", "romantic", "vintage"],
+    silhouette: ["cropped", "fit-and-flare"],
+    texture: ["crochet", "lace", "textured"],
+    chroma: [22, 128],
+  },
+  minimal: {
+    style: ["minimalist", "classic"],
+    silhouette: ["straight", "tailored"],
+    texture: ["smooth", "woven"],
+    chroma: [0, 20],
+  },
+  experimental: {
+    style: ["edgy", "streetwear", "vintage"],
+    silhouette: ["boxy", "oversized", "cropped"],
+    chroma: [25, 128],
+  },
+};
+
+export function scoreIntentionFit(
+  intention: StyleIntention,
+  attributes: GarmentAttributes
+): number {
+  const target = INTENTION_TARGETS[intention];
+  const facetScores = (["style", "silhouette", "formality", "texture"] as const)
+    .flatMap((facet) => {
+      const value = normalizeGarmentFacet(facet, attributes[facet]);
+      const accepted = target[facet];
+      return value && accepted
+        ? [accepted.includes(value) ? 100 : 0]
+        : [];
+    });
+  const chroma = Math.hypot(attributes.lab.a, attributes.lab.b);
+  const [minimum, maximum] = target.chroma;
+  const chromaScore = chroma < minimum
+    ? Math.max(0, 100 - (minimum - chroma) * 4)
+    : chroma > maximum
+      ? Math.max(0, 100 - (chroma - maximum) * 4)
+      : 100;
+
+  return Math.round(
+    [...facetScores, chromaScore].reduce((sum, score) => sum + score, 0) /
+    (facetScores.length + 1)
+  );
 }
 
 export function encodeGarmentAttributes(attributes: GarmentAttributes): number[] {
@@ -215,9 +305,17 @@ export function rankGarments(
 
   const ownConfidence = Math.min(1, currentPreferences.interactionCount / 3);
   const neighborConfidence = Math.min(1, neighbors.length / 3);
-  const collaborativeWeight = 0.55 * neighborConfidence;
-  const ownWeight = 0.35 * ownConfidence;
-  const skinWeight = Math.max(0, 1 - collaborativeWeight - ownWeight);
+  const hasExpandedSignals = candidates.some(
+    (candidate) =>
+      typeof candidate.intentionScore === "number" ||
+      typeof candidate.skinTrajectoryScore === "number"
+  );
+  const legacyCollaborativeWeight = 0.55 * neighborConfidence;
+  const legacyOwnWeight = 0.35 * ownConfidence;
+  const legacySkinWeight = Math.max(
+    0,
+    1 - legacyCollaborativeWeight - legacyOwnWeight
+  );
 
   return candidates
     .map((candidate) => {
@@ -237,17 +335,63 @@ export function rankGarments(
             0
           ) / neighborWeight)
         : null;
-      const predictedSatisfaction = Math.round(
-        candidate.skinColorScore * skinWeight +
-          userPreferenceScore * ownWeight +
-          (collaborativeScore ?? candidate.skinColorScore) * collaborativeWeight
-      );
+      const hasIntentScore = typeof candidate.intentionScore === "number";
+      const hasTrajectoryScore = typeof candidate.skinTrajectoryScore === "number";
+      const predictedSatisfaction = hasExpandedSignals
+          ? (() => {
+              const factors = [
+                {
+                  score: candidate.skinColorScore,
+                  weight: hasTrajectoryScore
+                    ? RECOMMENDATION_SCORE_WEIGHTS.currentSkinColor
+                    : RECOMMENDATION_SCORE_WEIGHTS.currentSkinColor +
+                      RECOMMENDATION_SCORE_WEIGHTS.skinColorTrajectory,
+                },
+                ...(hasTrajectoryScore
+                  ? [{
+                      score: candidate.skinTrajectoryScore!,
+                      weight: RECOMMENDATION_SCORE_WEIGHTS.skinColorTrajectory,
+                    }]
+                  : []),
+                ...(hasIntentScore
+                  ? [{
+                      score: candidate.intentionScore!,
+                      weight: RECOMMENDATION_SCORE_WEIGHTS.intention,
+                    }]
+                  : []),
+                ...(ownConfidence > 0
+                  ? [{
+                      score: userPreferenceScore,
+                      weight: RECOMMENDATION_SCORE_WEIGHTS.personalPreference * ownConfidence,
+                    }]
+                  : []),
+                ...(collaborativeScore !== null && neighborConfidence > 0
+                  ? [{
+                      score: collaborativeScore,
+                      weight: RECOMMENDATION_SCORE_WEIGHTS.collaborativePreference *
+                        neighborConfidence,
+                    }]
+                  : []),
+              ];
+              const totalWeight = factors.reduce((sum, factor) => sum + factor.weight, 0);
+              return Math.round(
+                factors.reduce((sum, factor) => sum + factor.score * factor.weight, 0) /
+                totalWeight
+              );
+            })()
+          : Math.round(
+              candidate.skinColorScore * legacySkinWeight +
+                userPreferenceScore * legacyOwnWeight +
+                (collaborativeScore ?? candidate.skinColorScore) * legacyCollaborativeWeight
+            );
 
       return {
-        ...candidate,
-        predictedSatisfaction,
-        userPreferenceScore,
-        collaborativeScore,
+          ...candidate,
+          predictedSatisfaction,
+          userPreferenceScore,
+          collaborativeScore,
+          skinTrajectoryScore: candidate.skinTrajectoryScore ?? null,
+          intentionScore: candidate.intentionScore ?? null,
         neighborCount: neighborPredictions.length,
         neighborUserIds: neighborPredictions.map((neighbor) => neighbor.userId),
       };
