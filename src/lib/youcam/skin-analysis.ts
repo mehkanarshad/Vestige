@@ -6,7 +6,7 @@ import {
   YouCamApiError,
   YouCamTaskResult,
 } from "./client";
-import { hexToLab } from "@/lib/color-science";
+import { classifySkinUndertone, hexToLab } from "@/lib/color-science";
 
 export interface SkinAnalysisInput {
   image: Buffer;
@@ -112,12 +112,13 @@ function extractSummary(
   const toneColor = typeof color.skin_color === "string" && /^#[\da-f]{6}$/i.test(color.skin_color)
     ? color.skin_color
     : undefined;
+  const skinLab = toneColor ? hexToLab(toneColor) : null;
 
   return {
     tone: toneColor ? classifyTone(toneColor) : "not assessed",
     toneColor,
-    skinLab: toneColor ? hexToLab(toneColor) : null,
-    undertone: "not assessed",
+    skinLab,
+    undertone: skinLab ? classifySkinUndertone(skinLab) : "not assessed",
     skinType: skinType ?? "not assessed",
     concerns,
     concernScores,

@@ -36,8 +36,17 @@ assemble a complete outfit from multiple coordinated catalog products.
 - The first valid facial skin-color sample creates a Skin Passport in the
   user's style profile. The passport remains the saved reference profile;
   each session's fresh summary is stored separately on that session.
-- YouCam does not provide an undertone label. Vestige does not infer one from
-  the result.
+- YouCam does not provide an undertone label. Vestige estimates one
+  deterministically from the existing CIELAB color sample (`a*` and `b*`
+  chromatic direction): chroma below 8 maps to neutral; negative `a*` with
+  positive `b*` maps to olive; negative `b*` or a hue angle at most 30° maps
+  to cool; a hue angle at least 50° maps to warm; the intervening hue band maps
+  to neutral. Missing or invalid color remains `not assessed`.
+- The estimate is saved alongside the first Skin Passport and included in
+  session summaries. Older Passports without the field are classified from
+  their existing Lab values when displayed; Lab remains the source of truth.
+  This is a styling heuristic, not a YouCam result or medical assessment, and
+  is sensitive to lighting and image conditions.
 
 ### 3. Skin-analysis changes over time
 

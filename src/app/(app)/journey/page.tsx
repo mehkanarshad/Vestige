@@ -13,6 +13,7 @@ import {
 import { ArrowRight } from "lucide-react";
 import { calculateSkinTrajectory, compareSkinAnalyses } from "@/lib/skin-trends";
 import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
+import { classifySkinUndertone } from "@/lib/color-science";
 
 export const dynamic = "force-dynamic";
 
@@ -235,7 +236,9 @@ export default async function JourneyPage() {
                       )}
                       {skin && (
                         <span className="t-label-sm text-vestige-stone capitalize">
-                          {skin.tone} · {skin.undertone}
+                          {skin.tone} · {skin.skinLab
+                            ? classifySkinUndertone(skin.skinLab)
+                            : skin.undertone}
                         </span>
                       )}
                       {fb && (

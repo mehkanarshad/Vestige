@@ -4,8 +4,9 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
-import { SkinPassport, StyleProfileData } from "@/types";
+import { SkinPassport, SkinTraits, StyleProfileData } from "@/types";
 import { ArrowRight } from "lucide-react";
+import { classifySkinUndertone } from "@/lib/color-science";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,21 @@ export default async function StyleProfilePage() {
     prisma.session.count({ where: { userId: session.user.id, completedStep: { gte: 4 } } }),
   ]);
 
+  const skinPassport = parseJson<SkinPassport>(profileRow?.skinPassport ?? null);
+  const storedSkinTraits = parseJson<SkinTraits>(profileRow?.skinTraits);
+  const passportUndertone = skinPassport
+    ? classifySkinUndertone(skinPassport.skinLab)
+    : null;
+  const skinTraits = storedSkinTraits
+    ? {
+        ...storedSkinTraits,
+        undertone: storedSkinTraits.undertone === "not assessed" && passportUndertone
+          ? passportUndertone
+          : storedSkinTraits.undertone,
+      }
+    : null;
   const profile: StyleProfileData = profileRow ? {
-    skinTraits:      parseJson(profileRow.skinTraits),
+    skinTraits,
     preferredStyles: parseJson<string[]>(profileRow.preferredStyles) ?? [],
     avoidedStyles:   parseJson<string[]>(profileRow.avoidedStyles)   ?? [],
     intentions:      parseJson<Record<string, number>>(profileRow.intentions) ?? {},
@@ -30,8 +44,6 @@ export default async function StyleProfilePage() {
     skinTraits: null, preferredStyles: [], avoidedStyles: [],
     intentions: {}, colorPalette: [], styleSummary: "", sessionCount: 0,
   };
-  const skinPassport = parseJson<SkinPassport>(profileRow?.skinPassport ?? null);
-
   const topIntentions = Object.entries(profile.intentions).sort(([, a], [, b]) => b - a).slice(0, 5);
   const maxCount      = topIntentions[0]?.[1] ?? 1;
   const name          = session.user.name?.split(" ")[0] ?? "Your";
@@ -131,7 +143,7 @@ export default async function StyleProfilePage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
                 {[
                   { label: "Tone",      value: profile.skinTraits.tone },
-                  { label: "Undertone", value: profile.skinTraits.undertone },
+                  { label: "Estimated undertone", value: profile.skinTraits.undertone },
                   { label: "Skin type", value: profile.skinTraits.skinType },
                   {
                     label: "Concerns",
@@ -168,7 +180,7 @@ export default async function StyleProfilePage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 items-end">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-8 items-end">
                 <div className="flex items-center gap-3 col-span-2 sm:col-span-1">
                   <div
                     className="h-12 w-12 border border-vestige-sand"
@@ -179,6 +191,12 @@ export default async function StyleProfilePage() {
                     <p className="t-label-sm text-vestige-stone">Measured color</p>
                     <p className="font-mono text-xs text-vestige-ink">{skinPassport.toneColor}</p>
                   </div>
+                </div>
+                <div>
+                  <p className="t-label-sm text-vestige-stone mb-2">Estimated undertone</p>
+                  <p className="font-serif text-vestige-ink capitalize" style={{ fontSize: "1.5rem" }}>
+                    {classifySkinUndertone(skinPassport.skinLab)}
+                  </p>
                 </div>
                 {[
                   { label: "L* · lightness", value: skinPassport.skinLab.l },

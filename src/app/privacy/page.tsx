@@ -62,7 +62,8 @@ export default function PrivacyPage() {
             Each session's YouCam skin-concern estimates are stored with that session and
             compared with your previous fresh analysis. Your first facial skin-color
             result is saved in your Skin Passport for styling. YouCam does not return an
-            undertone result.
+            undertone label; Vestige estimates one from the measured CIELAB color values.
+            Lighting and photo conditions may affect this estimate.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Session data.</strong>{" "}

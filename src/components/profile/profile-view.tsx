@@ -84,7 +84,7 @@ export function ProfileView({
                     {[
                       { label: "Tone", value: profile.skinTraits.tone },
                       {
-                        label: "Undertone",
+                        label: "Estimated undertone",
                         value: profile.skinTraits.undertone,
                       },
                       {

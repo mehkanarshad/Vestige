@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/client";
 import { SkinPassport, SkinSummary } from "@/types";
+import { classifySkinUndertone } from "@/lib/color-science";
 
 const CONCERN_LABELS: Record<string, string> = {
   acne: "acne",
@@ -23,6 +24,7 @@ export async function saveSkinPassport(
     capturedAt: capturedAt.toISOString(),
     tone: summary.tone,
     toneColor: summary.toneColor,
+    undertone: classifySkinUndertone(summary.skinLab),
     skinType: summary.skinType,
     skinLab: summary.skinLab,
     concerns: summary.concernScores,
@@ -61,7 +63,7 @@ export function summaryFromSkinPassport(passport: SkinPassport): SkinSummary {
     tone: passport.tone,
     toneColor: passport.toneColor,
     skinLab: passport.skinLab,
-    undertone: "not assessed",
+    undertone: classifySkinUndertone(passport.skinLab),
     skinType: passport.skinType,
     concerns,
     concernScores: passport.concerns,

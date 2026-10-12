@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/session-guard";
 import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
-import { StyleProfileData, StyleEvolutionEntry } from "@/types";
+import { StyleProfileData, StyleEvolutionEntry, SkinPassport, SkinTraits } from "@/types";
+import { classifySkinUndertone } from "@/lib/color-science";
 
 export async function GET(_req: NextRequest) {
   const { userId, error } = await requireAuth();
@@ -16,9 +17,22 @@ export async function GET(_req: NextRequest) {
     }),
   ]);
 
+  const passport = parseJson<SkinPassport>(profileRow?.skinPassport);
+  const storedSkinTraits = parseJson<SkinTraits>(profileRow?.skinTraits);
+  const passportUndertone = passport
+    ? classifySkinUndertone(passport.skinLab)
+    : null;
+  const skinTraits = storedSkinTraits
+    ? {
+        ...storedSkinTraits,
+        undertone: storedSkinTraits.undertone === "not assessed" && passportUndertone
+          ? passportUndertone
+          : storedSkinTraits.undertone,
+      }
+    : null;
   const profile: StyleProfileData = profileRow
     ? {
-        skinTraits: parseJson(profileRow.skinTraits),
+        skinTraits,
         preferredStyles: parseJson<string[]>(profileRow.preferredStyles) ?? [],
         avoidedStyles: parseJson<string[]>(profileRow.avoidedStyles) ?? [],
         intentions: parseJson<Record<string, number>>(profileRow.intentions) ?? {},

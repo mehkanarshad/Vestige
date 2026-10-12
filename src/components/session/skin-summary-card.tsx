@@ -1,5 +1,4 @@
 import { SkinSummary } from "@/types";
-import { cn } from "@/lib/utils";
 
 const TONE_SWATCHES: Record<string, string> = {
   light: "#F5E6D3",
@@ -41,8 +40,13 @@ export function SkinSummaryCard({ summary }: { summary: SkinSummary }) {
           <p className="font-sans text-xs text-vestige-bark mt-0.5">
             {summary.undertone === "not assessed"
               ? "Undertone not assessed"
-              : `${undertone.label} undertone — ${undertone.hint}`}
+              : `Estimated ${undertone.label.toLowerCase()} undertone — ${undertone.hint}`}
           </p>
+          {summary.undertone !== "not assessed" && (
+            <p className="font-sans text-[10px] text-vestige-stone mt-1">
+              Estimated from measured skin color; lighting can affect it.
+            </p>
+          )}
         </div>
       </div>
 
@@ -76,11 +80,13 @@ export function SkinSummaryCard({ summary }: { summary: SkinSummary }) {
         <p className="caption mb-1.5">Color guidance</p>
         <p className="font-sans text-xs text-vestige-bark leading-relaxed">
           {summary.undertone === "not assessed"
-            ? "YouCam did not return an undertone result for this photo."
+            ? "A color sample was not available to estimate undertone."
             : summary.undertone === "warm"
             ? "Earth tones, warm neutrals, and rich terracottas will complement your complexion beautifully."
             : summary.undertone === "cool"
             ? "Jewel tones, cool grays, and true whites will harmonize with your undertone."
+            : summary.undertone === "olive"
+            ? "Muted earth tones, olive greens, deep teals, and balanced neutrals can complement your complexion."
             : "You have the versatility to wear both warm and cool palettes — soft neutrals are especially flattering."}
         </p>
       </div>

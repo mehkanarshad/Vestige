@@ -58,6 +58,7 @@ export interface SkinPassport {
   capturedAt: string;
   tone: string;
   toneColor: string;
+  undertone?: string;
   skinType: string;
   skinLab: LabColor;
   concerns: Record<string, number>;

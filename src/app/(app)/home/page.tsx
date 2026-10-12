@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
 import { SkinSummary, OutfitRecommendation } from "@/types";
 import { ArrowRight } from "lucide-react";
+import { classifySkinUndertone } from "@/lib/color-science";
 
 export const dynamic = "force-dynamic";
 
@@ -202,7 +203,9 @@ export default async function HomePage() {
                       )}
                       {skin && (
                         <span className="t-label-sm text-vestige-stone capitalize">
-                          {skin.tone} · {skin.undertone}
+                          {skin.tone} · {skin.skinLab
+                            ? classifySkinUndertone(skin.skinLab)
+                            : skin.undertone}
                         </span>
                       )}
                       {outfit?.colorPalette && (

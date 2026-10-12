@@ -12,6 +12,24 @@ export interface ColorMatchScore {
   label: string;
 }
 
+export type SkinUndertone = "warm" | "cool" | "neutral" | "olive";
+
+export function classifySkinUndertone(
+  lab: LabColor | null | undefined
+): SkinUndertone | "not assessed" {
+  if (!lab || ![lab.l, lab.a, lab.b].every(Number.isFinite)) return "not assessed";
+
+  const chroma = Math.hypot(lab.a, lab.b);
+  if (chroma < 8) return "neutral";
+  if (lab.a < 0 && lab.b > 0) return "olive";
+  if (lab.b < 0) return "cool";
+
+  const hue = (Math.atan2(lab.b, lab.a) * 180) / Math.PI;
+  if (hue >= 50) return "warm";
+  if (hue <= 30) return "cool";
+  return "neutral";
+}
+
 export function hexToLab(hex: string): LabColor {
   const match = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex);
   if (!match) throw new Error("Expected a six-digit hex color");
