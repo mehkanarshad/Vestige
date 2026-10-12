@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/session-guard";
 import { prisma } from "@/lib/db/client";
-import { updateStyleProfile } from "@/lib/ai";
+import { createStyleEvolutionSnapshot, updateStyleProfile } from "@/lib/ai";
 import { z } from "zod";
 
 const FeedbackSchema = z.object({
@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
     // Async profile update (non-blocking — don't await for the response)
     updateStyleProfile(userId!, sessionId).catch((err) => {
       console.error("[profile-update]", err);
+    });
+    createStyleEvolutionSnapshot(userId!).catch((err) => {
+      console.error("[style-evolution]", err);
     });
 
     return NextResponse.json({ id: feedback.id, ok: true });

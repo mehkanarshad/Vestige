@@ -14,6 +14,7 @@ import { ArrowRight } from "lucide-react";
 import { calculateSkinTrajectory, compareSkinAnalyses } from "@/lib/skin-trends";
 import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import { classifySkinUndertone } from "@/lib/color-science";
+import { parseEvolutionSnapshot } from "@/lib/style-evolution";
 
 export const dynamic = "force-dynamic";
 
@@ -73,10 +74,10 @@ export default async function JourneyPage() {
   } : null;
 
   const evolution: StyleEvolutionEntry[] = evolutionRows.map((e) => ({
-    id:          e.id,
-    snapshotAt:  e.snapshotAt.toISOString(),
-    summary:     e.summary,
-    traits:      parseJson<StyleProfileData>(e.traits) ?? (profile as StyleProfileData),
+    id: e.id,
+    snapshotAt: e.snapshotAt.toISOString(),
+    summary: e.summary,
+    ...parseEvolutionSnapshot(e.traits),
   }));
 
   const skinComparisons = new Map<
@@ -334,16 +335,14 @@ export default async function JourneyPage() {
 
 
         {/* ─────────────────────────────────────────────────────
-            EVOLUTION SIDEBAR — style arc over time
-            These are written by the AI as one-sentence summaries.
-            They appear as the user's style voice, not system output.
+            EVOLUTION SIDEBAR — measured style and skin changes
         ───────────────────────────────────────────────────────── */}
         <div className="border-t lg:border-t-0 lg:border-l border-vestige-sand pt-10 lg:pt-0 lg:pl-10">
           <p className="t-label text-vestige-stone mb-10">Style evolution</p>
 
           {evolution.length === 0 ? (
             <p className="font-sans text-vestige-stone" style={{ fontSize: "0.875rem", lineHeight: 1.65 }}>
-              Evolution snapshots are created every 5 sessions.
+              Evolution snapshots are created every 5 feedback-completed sessions.
               Complete more sessions to unlock your style arc.
             </p>
           ) : (
@@ -367,6 +366,46 @@ export default async function JourneyPage() {
                   >
                     &ldquo;{entry.summary}&rdquo;
                   </p>
+                  {entry.signals && (
+                    <div className="mt-2 space-y-1 font-sans text-xs text-vestige-stone">
+                      <p>
+                        Latest five-session window: {formatDate(entry.signals.windowStartAt)}–{formatDate(entry.signals.windowEndAt)}
+                      </p>
+                      <p>
+                        Snapshot after {entry.signals.sessionCount} feedback sessions
+                        {entry.signals.style.feedbackAcceptance.current === null
+                          ? ""
+                          : ` · ${entry.signals.style.feedbackAcceptance.current.toFixed(1)}% liked in latest window`}
+                        {entry.signals.style.feedbackAcceptance.deltaPercentagePoints === null
+                          ? ""
+                          : ` (${entry.signals.style.feedbackAcceptance.deltaPercentagePoints > 0 ? "+" : ""}${entry.signals.style.feedbackAcceptance.deltaPercentagePoints.toFixed(1)} pp vs prior window)`}
+                      </p>
+                      {entry.signals.skin.slice(0, 3).map((signal) => (
+                        <p key={signal.key}>
+                          {signal.label} estimate: {(signal.firstScore * 100).toFixed(1)} to{" "}
+                          {(signal.currentScore * 100).toFixed(1)} ({signal.deltaPercentagePoints > 0 ? "+" : ""}
+                          {signal.deltaPercentagePoints.toFixed(1)} points across {signal.observations} analyses)
+                        </p>
+                      ))}
+                      {entry.signals.style.intentions.slice(0, 2).map((signal) => (
+                        <p key={signal.intention}>
+                          {signal.intention} intention: {(signal.currentShare * 100).toFixed(0)}%
+                          {signal.deltaPercentagePoints === null
+                            ? " of this window"
+                            : ` (${signal.deltaPercentagePoints > 0 ? "+" : ""}${signal.deltaPercentagePoints.toFixed(1)} pp)`}
+                        </p>
+                      ))}
+                      {entry.signals.style.preferences
+                        .filter((signal) => signal.delta !== null)
+                        .slice(0, 2)
+                        .map(({ facet, value, delta }) => delta !== null && (
+                          <p key={`${facet}:${value}`}>
+                            {value} {facet} preference balance: {delta > 0 ? "+" : ""}
+                            {(delta * 100).toFixed(0)} points vs prior window
+                          </p>
+                        ))}
+                    </div>
+                  )}
                 </div>
               ))}
 

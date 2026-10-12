@@ -2,6 +2,12 @@ import OpenAI from "openai";
 import { OutfitRecommendation, SkinSummary, StyleProfileData } from "@/types";
 import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
+import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
+import {
+  calculateStyleEvolutionSignals,
+  StyleEvolutionSession,
+  summarizeStyleEvolution,
+} from "@/lib/style-evolution";
 
 export async function updateStyleProfile(
   userId: string,
@@ -102,16 +108,83 @@ export async function updateStyleProfile(
     },
   });
 
-  const updatedProfile = await prisma.styleProfile.findUnique({ where: { userId } });
-  if (updatedProfile && updatedProfile.sessionCount % 5 === 0) {
-    await prisma.styleEvolution.create({
-      data: {
-        userId,
-        summary: profile.styleSummary,
-        traits: JSON.stringify(profile),
+}
+
+export async function createStyleEvolutionSnapshot(userId: string): Promise<void> {
+  const sessions = await prisma.session.findMany({
+    where: {
+      userId,
+      completedStep: { gte: 6 },
+      feedback: { some: {} },
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      createdAt: true,
+      intention: true,
+      feedback: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { type: true },
       },
-    });
-  }
+      garmentInteractions: {
+        select: {
+          action: true,
+          garment: {
+            select: { category: true, catalogAttributes: true },
+          },
+        },
+      },
+    },
+  });
+  if (sessions.length === 0 || sessions.length % 5 !== 0) return;
+
+  const latestEvolution = await prisma.styleEvolution.findFirst({
+    where: { userId },
+    orderBy: { snapshotAt: "desc" },
+    select: { traits: true },
+  });
+  const previousSignals = parseJson<{ throughSessionId?: string }>(
+    latestEvolution?.traits
+  );
+  const latestSession = sessions[sessions.length - 1];
+  if (previousSignals?.throughSessionId === latestSession.id) return;
+
+  const observations: StyleEvolutionSession[] = sessions.map((session) => ({
+    id: session.id,
+    capturedAt: session.createdAt,
+    intention: session.intention,
+    feedback: session.feedback.map(({ type }) => type),
+    interactions: session.garmentInteractions.map((interaction) => {
+      const catalogAttributes = parseJson<Record<string, unknown>>(
+        interaction.garment.catalogAttributes
+      );
+      const attributes: Record<string, string | null> = {
+        category: interaction.garment.category,
+      };
+      for (const facet of ["tone", "silhouette", "formality", "style", "texture"]) {
+        const value = catalogAttributes?.[facet];
+        attributes[facet] = typeof value === "string" ? value : null;
+      }
+      const action = interaction.action === "liked"
+        || interaction.action === "rejected"
+        || interaction.action === "more_like_this"
+        ? interaction.action
+        : "unknown";
+      return { action, attributes };
+    }),
+  }));
+  const skinHistory = await loadSkinAnalysisHistory(userId);
+  const signals = calculateStyleEvolutionSignals(observations, skinHistory);
+  if (!signals || signals.throughSessionId !== latestSession.id) return;
+
+  await prisma.styleEvolution.create({
+    data: {
+      userId,
+      summary: summarizeStyleEvolution(signals),
+      traits: JSON.stringify(signals),
+    },
+  });
 }
 
 async function generateStyleSummary(profile: StyleProfileData): Promise<string> {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
 import { StyleProfileData, StyleEvolutionEntry, SkinPassport, SkinTraits } from "@/types";
 import { classifySkinUndertone } from "@/lib/color-science";
+import { parseEvolutionSnapshot } from "@/lib/style-evolution";
 
 export async function GET(_req: NextRequest) {
   const { userId, error } = await requireAuth();
@@ -54,7 +55,7 @@ export async function GET(_req: NextRequest) {
     id: e.id,
     snapshotAt: e.snapshotAt.toISOString(),
     summary: e.summary,
-    traits: parseJson<StyleProfileData>(e.traits) ?? profile,
+    ...parseEvolutionSnapshot(e.traits),
   }));
 
   return NextResponse.json({ profile, evolution });

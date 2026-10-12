@@ -146,8 +146,10 @@ Lab reading when available. It does not ingest Channel3 products itself.
   key, Vestige uses a local fallback sentence. This is not GPT-4o outfit
   generation. The code does not validate provider credentials at startup, so
   a working key and live API call must be verified separately.
-- A Style Evolution snapshot is created when the profile's completed-session
-  count reaches a multiple of five.
+- A Style Evolution snapshot is created every five distinct feedback-completed
+  sessions from stored session data. It records measured skin-concern trajectories,
+  feedback acceptance, intention shares, and catalog-attribute preference changes;
+  it does not use the accumulated style profile as its signal source.
 - `/journey` is the canonical session timeline. The legacy `/history` route
   redirects there.
 

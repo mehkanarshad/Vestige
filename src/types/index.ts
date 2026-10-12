@@ -145,11 +145,50 @@ export interface StyleProfileData {
   sessionCount: number;
 }
 
+export interface StyleEvolutionSignals {
+  version: 1;
+  throughSessionId: string;
+  sessionCount: number;
+  windowStartAt: string;
+  windowEndAt: string;
+  skin: Array<{
+    key: string;
+    label: string;
+    firstScore: number;
+    currentScore: number;
+    deltaPercentagePoints: number;
+    observations: number;
+  }>;
+  style: {
+    feedbackAcceptance: {
+      current: number | null;
+      previous: number | null;
+      deltaPercentagePoints: number | null;
+      responses: number;
+    };
+    intentions: Array<{
+      intention: string;
+      currentShare: number;
+      previousShare: number | null;
+      deltaPercentagePoints: number | null;
+    }>;
+    preferences: Array<{
+      facet: string;
+      value: string;
+      currentScore: number;
+      previousScore: number | null;
+      delta: number | null;
+      responses: number;
+    }>;
+  };
+}
+
 export interface StyleEvolutionEntry {
   id: string;
   snapshotAt: string;
   summary: string;
-  traits: StyleProfileData;
+  traits: StyleProfileData | null;
+  signals?: StyleEvolutionSignals;
 }
 
 // ── Session ───────────────────────────────────────────────────────────────────

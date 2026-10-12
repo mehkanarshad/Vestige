@@ -231,6 +231,46 @@ export function ProfileView({
                       <p className="font-serif text-base text-vestige-ink italic">
                         &ldquo;{entry.summary}&rdquo;
                       </p>
+                      {entry.signals && (
+                        <div className="mt-2 space-y-1 font-sans text-xs text-vestige-stone">
+                          <p>
+                            Latest five-session window: {formatDate(entry.signals.windowStartAt)}–{formatDate(entry.signals.windowEndAt)}
+                          </p>
+                          <p>
+                            Snapshot after {entry.signals.sessionCount} feedback sessions
+                            {entry.signals.style.feedbackAcceptance.current === null
+                              ? ""
+                              : ` · ${entry.signals.style.feedbackAcceptance.current.toFixed(1)}% liked in latest window`}
+                            {entry.signals.style.feedbackAcceptance.deltaPercentagePoints === null
+                              ? ""
+                              : ` (${entry.signals.style.feedbackAcceptance.deltaPercentagePoints > 0 ? "+" : ""}${entry.signals.style.feedbackAcceptance.deltaPercentagePoints.toFixed(1)} pp vs prior window)`}
+                          </p>
+                          {entry.signals.skin.slice(0, 3).map((signal) => (
+                            <p key={signal.key}>
+                              {signal.label} estimate: {(signal.firstScore * 100).toFixed(1)} to{" "}
+                              {(signal.currentScore * 100).toFixed(1)} ({signal.deltaPercentagePoints > 0 ? "+" : ""}
+                              {signal.deltaPercentagePoints.toFixed(1)} points across {signal.observations} analyses)
+                            </p>
+                          ))}
+                          {entry.signals.style.intentions.slice(0, 2).map((signal) => (
+                            <p key={signal.intention}>
+                              {signal.intention} intention: {(signal.currentShare * 100).toFixed(0)}%
+                              {signal.deltaPercentagePoints === null
+                                ? " of this window"
+                                : ` (${signal.deltaPercentagePoints > 0 ? "+" : ""}${signal.deltaPercentagePoints.toFixed(1)} pp)`}
+                            </p>
+                          ))}
+                          {entry.signals.style.preferences
+                            .filter((signal) => signal.delta !== null)
+                            .slice(0, 2)
+                            .map(({ facet, value, delta }) => delta !== null && (
+                              <p key={`${facet}:${value}`}>
+                                {value} {facet} preference balance: {delta > 0 ? "+" : ""}
+                                {(delta * 100).toFixed(0)} points vs prior window
+                              </p>
+                            ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {/* Now marker */}

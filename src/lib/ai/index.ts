@@ -1,1 +1,1 @@
-export { updateStyleProfile } from "./stylist";
+export { createStyleEvolutionSnapshot, updateStyleProfile } from "./stylist";
