@@ -1,3 +1,4 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/db/client";
 import {
   buildPreferenceVector,
@@ -7,8 +8,11 @@ import {
 } from "@/lib/collaborative-filter";
 import { LabColor } from "@/types";
 
-export async function recomputeGarmentPreferences(userId: string) {
-  const interactions = await prisma.garmentInteraction.findMany({
+export async function recomputeGarmentPreferences(
+  userId: string,
+  client: PrismaClient | Prisma.TransactionClient = prisma
+) {
+  const interactions = await client.garmentInteraction.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
     select: {
@@ -50,7 +54,7 @@ export async function recomputeGarmentPreferences(userId: string) {
   });
 
   const preferences = buildPreferenceVector(signals);
-  await prisma.styleProfile.upsert({
+  await client.styleProfile.upsert({
     where: { userId },
     create: {
       userId,

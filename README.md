@@ -104,7 +104,10 @@ items or their product details.
 4. User feedback on garments contributes preferences for category, color
    coordinates, tone, silhouette, formality, style, and texture. Preference
    vectors from other users contribute a collaborative score when enough
-   similar-user interaction history exists.
+   similar-user interaction history exists. The per-user vector is recomputed
+   from the existing `GarmentInteraction` rows and persisted in
+   `StyleProfile.garmentPreferences`; signals use signed ratings and a
+   180-day recency half-life.
 5. `rankGarments` combines current color (35%), recent color trajectory (15%,
    folded into current color when history is insufficient), intention fit
    (20%), personal preference (20%), and collaborative preference (10%).
@@ -133,8 +136,15 @@ Lab reading when available. It does not ingest Channel3 products itself.
   like this.” These garment interactions are stored and used to recompute the
   preference vector that influences later ranking.
 - Session-level feedback also supports liked, adjusted, or rejected responses
-  and optional notes. It updates the style profile's recorded intention,
-  preferred/avoided garment facets, and color palette.
+  and optional notes. For liked/rejected feedback, Vestige resolves the
+  selected outfit from the session's stored recommendation and records signals
+  for its catalog/user-owned garment IDs in those same `GarmentInteraction`
+  rows. Those signals immediately recompute the same persisted preference
+  vector used by ranking. Adjusted feedback remains descriptive because it
+  does not express a clear positive or negative rating.
+- The profile's preferred/avoided facet labels and generated summary are
+  descriptive UI signals; garment ranking uses the weighted attribute vector,
+  not those text fields.
 
 ### 7. Style profile and history
 
