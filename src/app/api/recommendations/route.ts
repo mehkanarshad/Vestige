@@ -5,6 +5,7 @@ import { parseJson } from "@/lib/utils";
 import { scoreGarmentColor } from "@/lib/color-science";
 import {
   buildPreferenceVector,
+  CollaborativeContext,
   GarmentAttributes,
   rankGarments,
   scoreIntentionFit,
@@ -94,7 +95,12 @@ export async function POST(req: NextRequest) {
       }),
       prisma.styleProfile.findMany({
         where: { userId: { not: userId! }, garmentInteractionCount: { gte: 2 } },
-        select: { userId: true, garmentPreferences: true },
+        select: {
+          userId: true,
+          garmentPreferences: true,
+          skinPassport: true,
+          intentions: true,
+        },
       }),
     ]);
 
@@ -157,9 +163,24 @@ export async function POST(req: NextRequest) {
       ?? buildPreferenceVector([]);
     const otherUsers = peerProfiles.flatMap((peer) => {
       const preferences = parsePreferenceVector(peer.garmentPreferences);
-      return preferences ? [{ userId: peer.userId, preferences }] : [];
+      if (!preferences) return [];
+      const peerPassport = parseJson<SkinPassport>(peer.skinPassport);
+      const peerSkinLab = peerPassport?.skinLab;
+      const skinLabIsValid = Boolean(
+        peerSkinLab &&
+        Number.isFinite(peerSkinLab.l) &&
+        Number.isFinite(peerSkinLab.a) &&
+        Number.isFinite(peerSkinLab.b)
+      );
+      return [{
+        userId: peer.userId,
+        preferences,
+        skinLab: skinLabIsValid ? peerSkinLab : null,
+        intentions: parseJson<Record<string, number>>(peer.intentions) ?? {},
+      }];
     });
-    const ranked = rankGarments(userId!, currentPreferences, otherUsers, candidates, 10);
+    const context: CollaborativeContext = { skinLab, intention };
+    const ranked = rankGarments(userId!, currentPreferences, otherUsers, candidates, 10, context);
     const garmentById = new Map(catalogGarments.map((garment) => [garment.id, garment]));
     const recommendations: OutfitRecommendation[] = ranked.slice(0, 3).flatMap((rankedGarment) => {
       const garment = garmentById.get(rankedGarment.id);

@@ -1,70 +1,64 @@
-/** Locally hosted lookbook photography with consistent aspect ratios and overlays. */
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
-export type ImageAspect = "portrait" | "landscape" | "square" | "wide" | "story";
-export type ImageVariant = 0 | 1 | 2 | 3 | 4 | 5;
+export type EditorialSubject =
+  | "home-hero"
+  | "wardrobe-rail"
+  | "wardrobe-edit"
+  | "session-context"
+  | "profile-story"
+  | "intention-story"
+  | "catalog-context";
 
 interface EditorialImageProps {
-  aspect?: ImageAspect;
-  variant?: ImageVariant;
+  subject: EditorialSubject;
   caption?: string;
-  overlayText?: string; // large editorial text overlaid on the image
   className?: string;
-  dark?: boolean; // forces a darker tonal range
 }
 
-/** Aspect ratio map */
-const ASPECT: Record<ImageAspect, string> = {
-  portrait:  "aspect-[2/3]",
-  landscape: "aspect-[3/2]",
-  square:    "aspect-square",
-  wide:      "aspect-[16/9]",
-  story:     "aspect-[9/16]",
+const PHOTOS: Record<EditorialSubject, { src: string; alt: string; imageClassName?: string }> = {
+  "home-hero": {
+    src: "/images/editorial/look-01.jpg",
+    alt: "Warm editorial fashion portrait with soft amber light and dark tailoring",
+  },
+  "wardrobe-rail": {
+    src: "/images/editorial/look-04.jpg",
+    alt: "A carefully spaced rail of neutral garments in a warm, minimal studio",
+  },
+  "wardrobe-edit": {
+    src: "/images/editorial/wardrobe-edit.jpg",
+    alt: "A considered edit of warm-toned clothing on a bright boutique rail",
+  },
+  "session-context": {
+    src: "/images/editorial/portrait-warm.jpg",
+    alt: "A close portrait in warm amber light, representing the photo context for a styling session",
+  },
+  "profile-story": {
+    src: "/images/editorial/brown-editorial.jpg",
+    alt: "A relaxed olive knit outfit in a soft outdoor setting",
+    imageClassName: "saturate-[.72] brightness-[1.03]",
+  },
+  "intention-story": {
+    src: "/images/editorial/wood-editorial.jpg",
+    alt: "Soft beige and cream fabrics with a close view of their natural textures",
+  },
+  "catalog-context": {
+    src: "/images/editorial/boutique-warm.jpg",
+    alt: "A warm boutique interior with a considered clothing display",
+  },
 };
 
-const PHOTOS = [
-  {
-    src: "/images/editorial/look-01.jpg",
-    alt: "Model wearing a warm-toned street-style outfit",
-  },
-  {
-    src: "/images/editorial/look-02.jpg",
-    alt: "Editorial fashion look in muted seasonal colors",
-  },
-  {
-    src: "/images/editorial/look-03.jpg",
-    alt: "A polished, contemporary outfit styled for the street",
-  },
-  {
-    src: "/images/editorial/look-04.jpg",
-    alt: "A curated collection of wardrobe pieces in neutral tones",
-  },
-  {
-    src: "/images/editorial/look-05.jpg",
-    alt: "Model in a considered seasonal look",
-  },
-  {
-    src: "/images/editorial/look-06.jpg",
-    alt: "Close beauty portrait with natural makeup",
-  },
-];
-
 export function EditorialImage({
-  aspect = "portrait",
-  variant = 0,
+  subject,
   caption,
-  overlayText,
   className,
-  dark,
 }: EditorialImageProps) {
-  const photo = PHOTOS[dark ? 3 + (variant % 3) : variant];
+  const photo = PHOTOS[subject];
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden select-none bg-vestige-parchment",
-        ASPECT[aspect],
+        "relative aspect-[3/2] overflow-hidden select-none bg-vestige-parchment",
         className
       )}
       role="img"
@@ -75,20 +69,8 @@ export function EditorialImage({
         alt=""
         fill
         sizes="(max-width: 1024px) 100vw, 50vw"
-        className={cn("object-cover", dark && "brightness-90")}
+        className={cn("object-cover", photo.imageClassName)}
       />
-
-      {/* Optional large editorial overlay text */}
-      {overlayText && (
-        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-vestige-ink/30 to-transparent p-5">
-          <span
-            className="font-serif leading-none text-vestige-cream/25 pointer-events-none"
-            style={{ fontSize: "clamp(2rem, 8vw, 4rem)", fontWeight: 700 }}
-          >
-            {overlayText}
-          </span>
-        </div>
-      )}
 
       {/* Caption badge */}
       {caption && (
@@ -99,26 +81,5 @@ export function EditorialImage({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Legacy alias — keeps existing pages that import PhotoPlaceholder working.
- */
-interface PhotoPlaceholderProps {
-  aspect?: "portrait" | "landscape" | "square";
-  label?: string;
-  index?: number;
-  className?: string;
-}
-
-export function PhotoPlaceholder({ aspect = "portrait", label, index = 0, className }: PhotoPlaceholderProps) {
-  return (
-    <EditorialImage
-      aspect={aspect}
-      variant={(index % 6) as ImageVariant}
-      caption={label}
-      className={className}
-    />
   );
 }

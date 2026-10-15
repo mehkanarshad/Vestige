@@ -18,7 +18,7 @@ export default async function LandingPage() {
           Full-viewport split: left = type, right = image composition.
           The headline dominates at 900 weight — nothing else competes.
       ───────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-screen grid lg:grid-cols-[1fr_44%] overflow-hidden bg-vestige-cream">
+      <section className="relative min-h-screen grid lg:grid-cols-[1fr_48%] overflow-hidden bg-vestige-cream">
 
         {/* Left — copy */}
         <div className="flex flex-col justify-end pb-16 pt-32 px-fluid lg:pl-[clamp(2.5rem,6vw,7rem)] lg:pr-16 animate-fade-up">
@@ -89,18 +89,14 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Right — image composition (hidden on mobile) */}
-        <div className="hidden lg:grid grid-rows-[1fr_1fr] gap-2.5 p-4 pt-[60px] bg-vestige-parchment">
-          <EditorialImage aspect="landscape" variant={0} className="w-full h-full" overlayText="Look" />
-          <div className="grid grid-cols-2 gap-2.5">
-            <EditorialImage aspect="square" variant={5} className="w-full h-full" />
-            <EditorialImage aspect="square" variant={3} className="w-full h-full" />
-          </div>
+        {/* Right — primary editorial look (hidden on mobile) */}
+        <div className="hidden lg:flex items-center justify-center p-5 pt-[60px] bg-vestige-parchment">
+          <EditorialImage subject="home-hero" className="w-full" />
         </div>
 
-        {/* Mobile image strip */}
+        {/* Mobile version of the primary editorial look */}
         <div className="lg:hidden px-5 pb-12">
-          <EditorialImage aspect="wide" variant={0} className="w-full" />
+          <EditorialImage subject="home-hero" className="w-full" />
         </div>
       </section>
 
@@ -130,31 +126,34 @@ export default async function LandingPage() {
       ───────────────────────────────────────────────────────────── */}
       <section className="py-section container-xl">
 
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-16">
-          <div>
-            <p className="t-label text-vestige-stone mb-5">The system</p>
-            <h2
-              className="font-serif text-vestige-ink"
-              style={{ fontSize: "clamp(1.875rem, 3.5vw, 2.875rem)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.015em" }}
+        <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-16 items-center mb-16">
+          <EditorialImage subject="session-context" caption="Your photo sets the context for each session" />
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+            <div>
+              <p className="t-label text-vestige-stone mb-5">The system</p>
+              <h2
+                className="font-serif text-vestige-ink"
+                style={{ fontSize: "clamp(1.875rem, 3.5vw, 2.875rem)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.015em" }}
+              >
+                Style, remembered<br />and compounded.
+              </h2>
+            </div>
+            <Link
+              href="/how-it-works"
+              className="flex-shrink-0 flex items-center gap-1.5 font-sans text-vestige-bark hover:text-vestige-ink transition-colors"
+              style={{ fontSize: "0.8125rem" }}
             >
-              Style, remembered<br />and compounded.
-            </h2>
+              Full walkthrough <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
-          <Link
-            href="/how-it-works"
-            className="flex-shrink-0 flex items-center gap-1.5 font-sans text-vestige-bark hover:text-vestige-ink transition-colors"
-            style={{ fontSize: "0.8125rem" }}
-          >
-            Full walkthrough <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-12">
           {[
             { n: "01", title: "Skin-aware analysis",     body: "YouCam returns facial skin color and concern scores for complexion-aware styling." },
-            { n: "02", title: "Intention-driven styling", body: "Choose how you want to feel. Three curated outfits built around your complexion and that intention." },
+            { n: "02", title: "Intention-driven styling", body: "Choose how you want to feel. Vestige ranks individual catalog pieces using your intention, color analysis, and saved preferences." },
             { n: "03", title: "Virtual try-on",           body: "Try on a ranked catalog garment or upload another piece. YouCam renders one garment at a time on your photo." },
-            { n: "04", title: "Memory that compounds",    body: "Every like, rejection, and note is stored. Session five looks nothing like session one." },
+            { n: "04", title: "Memory that compounds",    body: "Likes, rejections, and notes build a more complete picture of your style with every session." },
           ].map(({ n, title, body }) => (
             <div key={n}>
               <p
@@ -184,14 +183,34 @@ export default async function LandingPage() {
           Large image left, narrative right. Asymmetric on purpose.
       ───────────────────────────────────────────────────────────── */}
       <section className="py-section bg-vestige-parchment">
-        <div className="container-xl grid grid-cols-1 lg:grid-cols-[55%_1fr] gap-12 lg:gap-20 items-center">
+        <div className="container-xl grid grid-cols-1 xl:grid-cols-[55%_1fr] gap-12 xl:gap-20 items-center">
 
-          {/* Image — dominant */}
-          <div className="grid grid-cols-[2fr_1fr] gap-3">
-            <EditorialImage aspect="portrait" variant={1} className="w-full" />
-            <div className="flex flex-col gap-3 pt-10">
-              <EditorialImage aspect="square"   variant={5} className="w-full" />
-              <EditorialImage aspect="landscape" variant={2} className="w-full" />
+          <div className="grid grid-cols-1 xl:grid-cols-[0.8fr_1.2fr] gap-5 items-center">
+            <EditorialImage subject="profile-story" caption="Everyday style inspiration" className="aspect-[4/5] w-full" />
+
+            <div className="border border-vestige-sand bg-vestige-cream p-6 sm:p-8">
+              <div className="flex items-center justify-between border-b border-vestige-sand pb-5">
+                <p className="t-label text-vestige-stone">Your style profile</p>
+                <span className="t-label-sm text-vestige-bark">Builds with every session</span>
+              </div>
+              <h3 className="font-serif text-vestige-ink mt-6 mb-7" style={{ fontSize: "clamp(1.375rem, 2vw, 1.75rem)", lineHeight: 1.2 }}>
+                A clearer picture of what works for you.
+              </h3>
+              <div className="divide-y divide-vestige-sand">
+                {[
+                  ["01", "Skin Passport", "A saved color reference"],
+                  ["02", "Style intentions", "The moods you return to"],
+                  ["03", "Garment feedback", "What you like and avoid"],
+                ].map(([n, label, detail]) => (
+                  <div key={n} className="grid grid-cols-[2.25rem_1fr] gap-3 py-3 first:pt-0 last:pb-0">
+                    <span className="t-label-sm text-vestige-gold">{n}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                      <span className="font-serif text-vestige-ink">{label}</span>
+                      <span className="t-body-sm">{detail}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -210,9 +229,9 @@ export default async function LandingPage() {
               your choices, and your feedback.
             </p>
             <p className="font-sans text-vestige-bark mb-10" style={{ fontSize: "0.9375rem", lineHeight: 1.7 }}>
-              By your fifth session, Vestige knows you prefer muted earth
-              tones over saturated colour, relaxed silhouettes over
-              structure, and that you always reject anything too formal.
+              Each session adds context from your photo, the intention you
+              choose, and the garment feedback you leave. Those signals help
+              rank later catalog picks around your recorded preferences.
             </p>
             <Link
               href={authed ? "/style-profile" : "/signup"}
@@ -230,53 +249,59 @@ export default async function LandingPage() {
           Not cards. Seven mood words with a colour accent.
       ───────────────────────────────────────────────────────────── */}
       <section className="py-section container-xl">
-        <p className="t-label text-vestige-stone mb-6">How do you want to feel?</p>
-        <h2
-          className="font-serif text-vestige-ink mb-14 text-balance"
-          style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)", fontWeight: 700, lineHeight: 1.12, letterSpacing: "-0.015em", maxWidth: "24ch" }}
-        >
-          Choose an intention. Every recommendation starts here.
-        </h2>
-
-        {/* Horizontal list — no cards, just type and a colour swatch */}
-        <div className="divide-y divide-vestige-sand">
-          {[
-            { mood: "Confident",    desc: "Strong silhouettes. Deliberate colour. An outfit that arrives before you do.",     swatch: "#58463A" },
-            { mood: "Calm",         desc: "Soft fabrications, unhurried lines. Clothes that feel like breathing.",             swatch: "#8C9E88" },
-            { mood: "Bold",         desc: "Colour, contrast, proportion. Deliberately and unapologetically striking.",        swatch: "#C07060" },
-            { mood: "Professional", desc: "Polished without being stiff. Precision, quality, and the right impression.",      swatch: "#3A3028" },
-            { mood: "Playful",      desc: "Pattern, texture, joy. The outfit communicates before you speak.",                 swatch: "#B89060" },
-            { mood: "Minimal",      desc: "Nothing excess. Every piece earns its place. Restraint as a statement.",           swatch: "#A09080" },
-            { mood: "Experimental", desc: "Conventional rules treated as suggestions. Vestige shows you the unexpected.",     swatch: "#607080" },
-          ].map(({ mood, desc, swatch }, i) => (
-            <div
-              key={mood}
-              className="group grid grid-cols-[auto_1fr_auto] items-center gap-6 py-5 hover:bg-vestige-parchment/60 transition-colors duration-150 px-1"
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 lg:gap-16 items-start">
+          <div>
+            <p className="t-label text-vestige-stone mb-6">How do you want to feel?</p>
+            <h2
+              className="font-serif text-vestige-ink mb-14 text-balance"
+              style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)", fontWeight: 700, lineHeight: 1.12, letterSpacing: "-0.015em", maxWidth: "24ch" }}
             >
-              {/* Index */}
-              <span className="font-sans text-vestige-stone w-6 text-right" style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.1em" }}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
+              Choose an intention. Every recommendation starts here.
+            </h2>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-10">
-                <h3
-                  className="font-serif text-vestige-ink flex-shrink-0"
-                  style={{ fontSize: "clamp(1.1rem, 2vw, 1.5rem)", fontWeight: 500, minWidth: "8.5rem" }}
+            {/* Horizontal list — no cards, just type and a colour swatch */}
+            <div className="divide-y divide-vestige-sand">
+              {[
+                { mood: "Confident",    desc: "Strong silhouettes. Deliberate colour. An outfit that arrives before you do.",     swatch: "#58463A" },
+                { mood: "Calm",         desc: "Soft fabrications, unhurried lines. Clothes that feel like breathing.",             swatch: "#7A8C76" },
+                { mood: "Bold",         desc: "Colour, contrast, proportion. Deliberately and unapologetically striking.",        swatch: "#B8924A" },
+                { mood: "Professional", desc: "Polished without being stiff. Precision, quality, and the right impression.",      swatch: "#2A1F18" },
+                { mood: "Playful",      desc: "Pattern, texture, joy. The outfit communicates before you speak.",                 swatch: "#D4AF72" },
+                { mood: "Minimal",      desc: "Nothing excess. Every piece earns its place. Restraint as a statement.",           swatch: "#B0A090" },
+                { mood: "Experimental", desc: "Conventional rules treated as suggestions. Vestige shows you the unexpected.",     swatch: "#857060" },
+              ].map(({ mood, desc, swatch }, i) => (
+                <div
+                  key={mood}
+                  className="group grid grid-cols-[auto_1fr_auto] items-center gap-6 py-5 hover:bg-vestige-parchment/60 transition-colors duration-150 px-1"
                 >
-                  {mood}
-                </h3>
-                <p className="font-sans text-vestige-bark" style={{ fontSize: "0.875rem", lineHeight: 1.6 }}>
-                  {desc}
-                </p>
-              </div>
+                  <span className="font-sans text-vestige-stone w-6 text-right" style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.1em" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
 
-              {/* Colour swatch */}
-              <div
-                className="h-6 w-6 rounded-full flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
-                style={{ backgroundColor: swatch }}
-              />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-10">
+                    <h3
+                      className="font-serif text-vestige-ink flex-shrink-0"
+                      style={{ fontSize: "clamp(1.1rem, 2vw, 1.5rem)", fontWeight: 500, minWidth: "8.5rem" }}
+                    >
+                      {mood}
+                    </h3>
+                    <p className="font-sans text-vestige-bark" style={{ fontSize: "0.875rem", lineHeight: 1.6 }}>
+                      {desc}
+                    </p>
+                  </div>
+
+                  <div
+                    className="h-6 w-6 rounded-full flex-shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: swatch }}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="lg:sticky lg:top-24">
+            <EditorialImage subject="intention-story" caption="Soft neutrals and tactile fabrics" />
+            <p className="t-label-sm text-vestige-stone mt-3">Editorial inspiration; your intention guides real catalog search.</p>
+          </div>
         </div>
       </section>
 

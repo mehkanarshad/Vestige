@@ -1,4 +1,5 @@
 import { LabColor, StyleIntention } from "@/types";
+import { deltaE2000 } from "@/lib/color-science";
 
 export const GARMENT_ATTRIBUTE_VERSION = 2 as const;
 const CATEGORIES = ["top", "bottom", "dress", "outerwear", "shoes", "accessory"] as const;
@@ -64,6 +65,13 @@ export interface UserPreferenceVector {
 export interface CollaborativeUser {
   userId: string;
   preferences: UserPreferenceVector;
+  skinLab?: LabColor | null;
+  intentions?: Record<string, number>;
+}
+
+export interface CollaborativeContext {
+  skinLab?: LabColor | null;
+  intention?: string | null;
 }
 
 export interface GarmentCandidate {
@@ -285,26 +293,81 @@ export function predictFromPreferences(
   return Math.round(50 + 50 * clamp(utility, -1, 1));
 }
 
+export function collaborativeSimilarity(
+  currentUserId: string,
+  currentPreferences: UserPreferenceVector,
+  currentContext: CollaborativeContext,
+  otherUser: CollaborativeUser
+): number {
+  if (otherUser.userId === currentUserId) return 0;
+  const components: Array<{ score: number; weight: number }> = [];
+  if (
+    currentPreferences.interactionCount >= 2 &&
+    otherUser.preferences.interactionCount >= 2
+  ) {
+    components.push({
+      score: Math.max(
+        0,
+        pearsonCorrelation(currentPreferences.values, otherUser.preferences.values)
+      ),
+      weight: 0.6,
+    });
+  }
+
+  if (currentContext.skinLab && otherUser.skinLab) {
+    const deltaE = deltaE2000(currentContext.skinLab, otherUser.skinLab);
+    components.push({
+      score: Math.exp(-deltaE / 25),
+      weight: 0.25,
+    });
+  }
+
+  if (currentContext.intention && otherUser.intentions) {
+    const total = Object.values(otherUser.intentions)
+      .filter((count) => Number.isFinite(count) && count > 0)
+      .reduce((sum, count) => sum + count, 0);
+    const count = otherUser.intentions[currentContext.intention];
+    if (total > 0 && Number.isFinite(count) && count > 0) {
+      components.push({ score: count / total, weight: 0.15 });
+    }
+  }
+
+  const totalWeight = components.reduce((sum, component) => sum + component.weight, 0);
+  return totalWeight > 0
+    ? components.reduce((sum, component) => sum + component.score * component.weight, 0) /
+        totalWeight
+    : 0;
+}
+
 export function rankGarments(
   currentUserId: string,
   currentPreferences: UserPreferenceVector,
   otherUsers: CollaborativeUser[],
   candidates: GarmentCandidate[],
-  topN = 10
+  topN = 10,
+  currentContext: CollaborativeContext = {}
 ): RankedGarment[] {
   const neighbors = otherUsers
     .filter((user) => user.userId !== currentUserId && user.preferences.interactionCount >= 2)
     .map((user) => ({
       userId: user.userId,
       preferences: user.preferences,
-      similarity: pearsonCorrelation(currentPreferences.values, user.preferences.values),
+      similarity: collaborativeSimilarity(
+        currentUserId,
+        currentPreferences,
+        currentContext,
+        user
+      ),
     }))
     .filter((neighbor) => neighbor.similarity >= 0.15)
     .sort((first, second) => second.similarity - first.similarity)
     .slice(0, Math.max(0, topN));
 
   const ownConfidence = Math.min(1, currentPreferences.interactionCount / 3);
-  const neighborConfidence = Math.min(1, neighbors.length / 3);
+  const neighborConfidence = Math.min(
+    1,
+    neighbors.reduce((sum, neighbor) => sum + neighbor.similarity, 0) / 3
+  );
   const hasExpandedSignals = candidates.some(
     (candidate) =>
       typeof candidate.intentionScore === "number" ||

@@ -13,12 +13,12 @@ export const dynamic = "force-dynamic";
 /* ─── Intention definitions ──────────────────────────────────────────────── */
 const INTENTIONS = [
   { value: "confident",    label: "Confident",    swatch: "#58463A" },
-  { value: "calm",         label: "Calm",         swatch: "#8C9E88" },
-  { value: "bold",         label: "Bold",         swatch: "#C07060" },
-  { value: "playful",      label: "Playful",      swatch: "#B89060" },
-  { value: "professional", label: "Professional", swatch: "#3A3028" },
-  { value: "minimal",      label: "Minimal",      swatch: "#A09080" },
-  { value: "experimental", label: "Experimental", swatch: "#607080" },
+  { value: "calm",         label: "Calm",         swatch: "#7A8C76" },
+  { value: "bold",         label: "Bold",         swatch: "#B8924A" },
+  { value: "playful",      label: "Playful",      swatch: "#D4AF72" },
+  { value: "professional", label: "Professional", swatch: "#2A1F18" },
+  { value: "minimal",      label: "Minimal",      swatch: "#B0A090" },
+  { value: "experimental", label: "Experimental", swatch: "#857060" },
 ];
 
 /* ─── Data ───────────────────────────────────────────────────────────────── */

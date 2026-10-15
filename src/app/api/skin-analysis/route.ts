@@ -8,6 +8,7 @@ import { SkinAnalysisRaw, SkinSummary } from "@/types";
 import { calculateSkinTrajectory, compareSkinAnalyses } from "@/lib/skin-trends";
 import { loadSkinAnalysisHistory } from "@/lib/skin-analysis-history";
 import sharp from "sharp";
+import { cropFaceForSkinAnalysis, FaceCropError } from "@/lib/youcam/face-crop";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -49,11 +50,14 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const image = await sharp(original)
+    // Keep a single full-frame session photo for display and garment try-on.
+    // Skin analysis gets a temporary face crop derived from that same upload.
+    const sourceImage = await sharp(original)
       .rotate()
       .resize({ width: 2560, height: 2560, fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 88 })
       .toBuffer();
+    const skinImage = await cropFaceForSkinAnalysis(sourceImage);
 
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session || session.userId !== userId) {
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
     const skinHistory = await loadSkinAnalysisHistory(userId!, session.createdAt);
     const previousSession = skinHistory.at(-1);
 
-    const analysis = await analyzeSkin({ image });
+    const analysis = await analyzeSkin({ image: skinImage });
     const raw: SkinAnalysisRaw = analysis.raw;
     const summary: SkinSummary = analysis.summary;
     await saveSkinPassport(userId!, summary);
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
         }
       : null;
 
-    const photoDataUrl = `data:image/jpeg;base64,${image.toString("base64")}`;
+    const photoDataUrl = `data:image/jpeg;base64,${sourceImage.toString("base64")}`;
 
     await prisma.session.update({
       where: { id: sessionId },
@@ -100,6 +104,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ summary, sessionId, comparison });
   } catch (err) {
+    if (err instanceof FaceCropError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     if (err instanceof YouCamApiError) {
       return NextResponse.json(
         { error: err.message },

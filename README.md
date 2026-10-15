@@ -104,10 +104,12 @@ items or their product details.
 4. User feedback on garments contributes preferences for category, color
    coordinates, tone, silhouette, formality, style, and texture. Preference
    vectors from other users contribute a collaborative score when enough
-   similar-user interaction history exists. The per-user vector is recomputed
-   from the existing `GarmentInteraction` rows and persisted in
-   `StyleProfile.garmentPreferences`; signals use signed ratings and a
-   180-day recency half-life.
+   interaction history exists. Neighbor similarity combines garment-preference
+   vector correlation, measured skin-color similarity from the existing Skin
+   Passport Lab value, and how often their recorded intentions match the
+   current intention. The per-user garment vector is recomputed from existing
+   `GarmentInteraction` rows and persisted in `StyleProfile.garmentPreferences`;
+   signals use signed ratings and a 180-day recency half-life.
 5. `rankGarments` combines current color (35%), recent color trajectory (15%,
    folded into current color when history is insufficient), intention fit
    (20%), personal preference (20%), and collaborative preference (10%).
@@ -115,8 +117,10 @@ items or their product details.
    available components are normalized before sorting.
 
 The resulting score is a deterministic heuristic, not a trained model or a
-calibrated probability of satisfaction. Recommendation cards expose component
-scores so users can see why products ranked. Concern trajectories such as
+calibrated probability of satisfaction. It estimates relative match from
+measured compatibility and recorded preference signals; it should not be read
+as a literal probability that a person will like an item. Recommendation cards
+expose component scores so users can see why products ranked. Concern trajectories such as
 redness and acne remain informational; there is no validated mapping from
 those estimates to garment properties.
 

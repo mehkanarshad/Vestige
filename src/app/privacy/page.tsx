@@ -51,11 +51,12 @@ export default function PrivacyPage() {
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Photos.</strong>{" "}
-            The portrait you upload for each session is sent to YouCam for a fresh skin
-            analysis and, if you use try-on, the session portrait and selected garment
-            are sent for rendering. The normalized portrait, uploaded garment image, and
-            generated try-on are stored with the session so you can revisit the result
-            and continue styling.
+            The photo you upload for each session is kept as the session portrait. A
+            temporary face crop is made from that photo for YouCam skin analysis; if you
+            use try-on, the full session portrait and selected garment are sent for
+            rendering. The normalized portrait, uploaded garment image, and generated
+            try-on are stored with the session so you can revisit the result and
+            continue styling.
           </p>
           <p>
             <strong className="font-medium text-vestige-espresso">Skin analysis results.</strong>{" "}

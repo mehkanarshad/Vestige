@@ -5,19 +5,18 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { parseJson } from "@/lib/utils";
 import { StyleProfileData } from "@/types";
-import { EditorialImage } from "@/components/ui/photo-placeholder";
 import { ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 const INTENTIONS = [
   { value: "confident",    label: "Confident",    desc: "Strong presence. An outfit that arrives first.",    swatch: "#58463A" },
-  { value: "calm",         label: "Calm",          desc: "Soft. Unhurried. Clothes that feel like breathing.", swatch: "#8C9E88" },
-  { value: "bold",         label: "Bold",          desc: "Colour, contrast, and deliberate impact.",           swatch: "#C07060" },
-  { value: "professional", label: "Professional",  desc: "Polished, precise, and unmistakably considered.",    swatch: "#3A3028" },
-  { value: "playful",      label: "Playful",       desc: "Joy in the details. Texture, pattern, lightness.",  swatch: "#B89060" },
-  { value: "minimal",      label: "Minimal",       desc: "Nothing excess. Only what belongs.",                swatch: "#A09080" },
-  { value: "experimental", label: "Experimental",  desc: "Rules as suggestions. Something unexpected.",        swatch: "#607080" },
+  { value: "calm",         label: "Calm",          desc: "Soft. Unhurried. Clothes that feel like breathing.", swatch: "#7A8C76" },
+  { value: "bold",         label: "Bold",          desc: "Colour, contrast, and deliberate impact.",           swatch: "#B8924A" },
+  { value: "professional", label: "Professional",  desc: "Polished, precise, and unmistakably considered.",    swatch: "#2A1F18" },
+  { value: "playful",      label: "Playful",       desc: "Joy in the details. Texture, pattern, lightness.",  swatch: "#D4AF72" },
+  { value: "minimal",      label: "Minimal",       desc: "Nothing excess. Only what belongs.",                swatch: "#B0A090" },
+  { value: "experimental", label: "Experimental",  desc: "Rules as suggestions. Something unexpected.",        swatch: "#857060" },
 ];
 
 export default async function StylingSessionPage() {
@@ -214,9 +213,37 @@ export default async function StylingSessionPage() {
             ))}
           </div>
 
-          {/* Right — editorial image */}
-          <div className="hidden lg:block" style={{ maxHeight: "520px" }}>
-            <EditorialImage aspect="portrait" variant={1} className="w-full h-full" />
+          {/* Right — real profile context, not a stock-style example */}
+          <div className="border border-vestige-sand bg-vestige-cream p-6 sm:p-8 lg:sticky lg:top-24">
+            <p className="t-label text-vestige-stone mb-5">Your session context</p>
+            <h2 className="font-serif text-vestige-ink mb-4" style={{ fontSize: "clamp(1.5rem, 2.5vw, 2rem)", lineHeight: 1.2 }}>
+              {isReturning ? "Your style history comes with you." : "A fresh start, shaped by you."}
+            </h2>
+            <p className="t-body-md mb-7">
+              {isReturning
+                ? `Vestige can draw on ${sessionCount} completed session${sessionCount === 1 ? "" : "s"}, along with the intention you choose today.`
+                : "Your photo and today’s intention start your style profile. Your garment feedback adds to it over time."}
+            </p>
+
+            {profile?.colorPalette && profile.colorPalette.length > 0 && (
+              <div className="mb-6 border-t border-vestige-sand pt-5">
+                <p className="t-label-sm text-vestige-stone mb-3">Saved color preferences</p>
+                <div className="flex items-center gap-2" aria-label="Saved color palette">
+                  {profile.colorPalette.slice(0, 7).map((color, i) => (
+                    <span key={`${color}-${i}`} className="h-7 w-7 rounded-full border border-vestige-ink/10" style={{ backgroundColor: color }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-vestige-sand pt-5">
+              <p className="t-label-sm text-vestige-stone mb-3">Signals used to rank catalog picks</p>
+              <div className="flex flex-wrap gap-2">
+                {["Skin color", "Intention", "Garment feedback"].map((signal) => (
+                  <span key={signal} className="border border-vestige-sand bg-vestige-parchment px-3 py-1.5 t-label-sm text-vestige-bark">{signal}</span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

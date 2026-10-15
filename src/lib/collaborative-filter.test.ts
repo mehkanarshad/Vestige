@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildPreferenceVector,
+  collaborativeSimilarity,
   encodeGarmentAttributes,
   normalizeGarmentFacet,
   pearsonCorrelation,
@@ -61,6 +62,35 @@ test("top-N similar users rank an unseen preferred-color garment higher", () => 
   assert.equal(ranked[0].id, "blue-unseen");
   assert.equal(ranked[0].neighborCount, 1);
   assert.ok(ranked[0].collaborativeScore !== null);
+});
+
+test("similar-user matching combines preference, skin-color, and intention history", () => {
+  const now = new Date("2026-01-01T00:00:00.000Z");
+  const preferences = buildPreferenceVector([
+    { action: "liked", attributes: blueTop, createdAt: now },
+    { action: "rejected", attributes: redTop, createdAt: now },
+  ], now);
+  const context = {
+    skinLab: { l: 62, a: 15, b: 22 },
+    intention: "bold",
+  };
+  const similarUser = {
+    userId: "similar",
+    preferences,
+    skinLab: { l: 63, a: 15, b: 23 },
+    intentions: { bold: 4, calm: 1 },
+  };
+  const lessRelevantUser = {
+    userId: "less-relevant",
+    preferences,
+    skinLab: { l: 43, a: -4, b: -28 },
+    intentions: { bold: 1, calm: 4 },
+  };
+
+  assert.ok(
+    collaborativeSimilarity("current", preferences, context, similarUser) >
+    collaborativeSimilarity("current", preferences, context, lessRelevantUser)
+  );
 });
 
 test("more-like-this contributes more preference weight than a plain like", () => {

@@ -96,7 +96,7 @@ export default function PhotoStep() {
           A clear picture. <span className="text-vestige-bark">A more personal style.</span>
         </h1>
         <p className="t-body-md max-w-xl">
-          Each session photo is analysed for skin-concern estimates. Your first analysis also creates a saved Skin Passport for styling; later analyses let you compare scores over time. Choose an evenly lit, face-forward photo with your shoulders visible.
+          Each session photo is analysed for skin-concern estimates. Your first analysis also creates a saved Skin Passport for styling; later analyses let you compare scores over time. Choose an evenly lit, face-forward photo with your upper body and shoulders visible.
         </p>
       </div>
 

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/client";
 import { scoreGarmentColor } from "@/lib/color-science";
 import {
   buildPreferenceVector,
+  CollaborativeContext,
   GarmentAttributes,
   rankGarments,
   scoreIntentionFit,
@@ -68,11 +69,30 @@ export async function GET(req: NextRequest) {
       ?? buildPreferenceVector([]);
     const peerProfiles = await prisma.styleProfile.findMany({
       where: { userId: { not: userId! }, garmentInteractionCount: { gte: 2 } },
-      select: { userId: true, garmentPreferences: true },
+      select: {
+        userId: true,
+        garmentPreferences: true,
+        skinPassport: true,
+        intentions: true,
+      },
     });
     const otherUsers = peerProfiles.flatMap((peer) => {
       const preferences = parsePreferenceVector(peer.garmentPreferences);
-      return preferences ? [{ userId: peer.userId, preferences }] : [];
+      if (!preferences) return [];
+      const peerPassport = parseJson<SkinPassport>(peer.skinPassport);
+      const peerSkinLab = peerPassport?.skinLab;
+      const skinLabIsValid = Boolean(
+        peerSkinLab &&
+        Number.isFinite(peerSkinLab.l) &&
+        Number.isFinite(peerSkinLab.a) &&
+        Number.isFinite(peerSkinLab.b)
+      );
+      return [{
+        userId: peer.userId,
+        preferences,
+        skinLab: skinLabIsValid ? peerSkinLab : null,
+        intentions: parseJson<Record<string, number>>(peer.intentions) ?? {},
+      }];
     });
 
     const [ownedInteractions, visibleGarments] = await Promise.all([
@@ -161,7 +181,15 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const ranked = rankGarments(userId!, currentPreferences, otherUsers, candidates, 10);
+    const context: CollaborativeContext = { skinLab, intention };
+    const ranked = rankGarments(
+      userId!,
+      currentPreferences,
+      otherUsers,
+      candidates,
+      10,
+      context
+    );
     const garmentById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
     return NextResponse.json({
       interactionCount: currentPreferences.interactionCount,
