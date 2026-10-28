@@ -6,11 +6,59 @@ Channel3, and explicit garment feedback to produce ranked catalog picks. A
 user can try on one garment at a time with YouCam Clothes Virtual Try-On and
 review prior sessions and skin-analysis estimates.
 
+The product is designed as a guided styling workflow: a person uploads one
+photo, receives a fresh complexion analysis, chooses what they are dressing
+for, reviews retailer products ranked for their color profile and preferences,
+tries one garment on their own full-frame photo, and records what they think.
+That feedback is used to make later catalog rankings more personal. The app's
+visual direction uses a restrained editorial palette and imagery; product
+photos in recommendations come from the catalog provider, while editorial
+images are presentation assets and do not represent app functionality.
+
 Vestige is a styling and product-discovery prototype, not a medical product or
 an online store. It does not diagnose skin conditions, sell products, or
 assemble a complete outfit from multiple coordinated catalog products.
 
 ## What the app does
+
+### The session from start to finish
+
+1. **Create or sign into an account.** The user starts a styling session from
+   the authenticated home screen. A session belongs to exactly one user.
+2. **Upload a portrait or upper-body photo.** JPEG, PNG, and WebP files up to
+   10 MB are accepted, with a minimum 480-pixel short side. The app rotates and
+   resizes the source to fit within 2560 by 2560 pixels. It uses that single
+   normalized full-frame image as the session photo.
+3. **Analyze the face without losing the body photo.** A server-side
+   BlazeFace detector finds the largest visible face and creates a temporary
+   face-focused derivative. The crop is framed so the face occupies about
+   70% of its width, within YouCam's documented range. Only this derivative is
+   sent to YouCam's skin and skin-tone analysis tasks. The full-frame image is
+   retained for the session display and later try-on. If no face is detected,
+   analysis stops with a request for a clearer, front-facing image.
+4. **Review the analysis and choose an intention.** The session shows the
+   returned skin type, color sample, and concern estimates, then asks what the
+   user is dressing for. The app keeps the fresh analysis on the session and
+   may initialize the user's saved Skin Passport from the first valid color
+   result.
+5. **Browse catalog picks.** The server searches Channel3 by clothing
+   category and intention, validates and stores usable product records, then
+   ranks returned items using complexion color compatibility, intention fit,
+   and available user and collaborative preference signals. The user selects
+   an individual product to continue.
+6. **Preview a garment.** The app sends the full-frame session image and one
+   selected catalog or uploaded garment to YouCam Clothes Virtual Try-On. The
+   crop created for skin analysis is not used for this operation. A garment
+   color-match estimate is also shown where available.
+7. **Leave feedback and revisit progress.** Session feedback, garment-level
+   reactions, and optional notes are saved. Those signals update the stored
+   preference vector used by later rankings. The Journey and Style Profile
+   screens summarize past sessions and available trends.
+
+The session store in the browser supports movement between steps; the
+authenticated session record in the database is the durable record. On later
+pages, the app can fetch the session again rather than depending only on the
+current browser state.
 
 ### 1. Accounts and sessions
 
@@ -25,8 +73,14 @@ assemble a complete outfit from multiple coordinated catalog products.
 
 ### 2. Fresh skin analysis and saved color profile
 
-- Each submitted session photo is normalized with Sharp and sent to YouCam's
-  Skin Analysis and Skin Tone Analysis tasks.
+- Each uploaded photo is normalized with Sharp. A server-side BlazeFace model
+  detects the largest face and makes a temporary face crop for YouCam's Skin
+  Analysis and Skin Tone Analysis tasks. The detector does not replace the
+  stored full-frame image, which remains available for try-on.
+- The face crop is a derived processing image and is not stored as the
+  session's photo. Skin analysis fails with a clear client error when a face
+  cannot be detected; it does not silently send an uncropped full-body image
+  to YouCam.
 - Vestige extracts concern estimates for acne, dark circles, wrinkles, pores,
   texture, redness, and age spots, along with the returned skin type and facial
   skin-color sample.
@@ -132,7 +186,9 @@ Lab reading when available. It does not ingest Channel3 products itself.
 
 - A user can select a catalog pick or upload a garment image for virtual
   try-on.
-- YouCam Clothes Virtual Try-On receives one garment and the session portrait.
+- YouCam Clothes Virtual Try-On receives one garment and the original
+  normalized full-frame session portrait. It does not receive the temporary
+  face crop used for skin analysis.
   The feature renders one garment at a time; it does not render a full outfit.
 - Vestige calculates a color-match score using the latest fresh session Lab
   color when available, falling back to the saved Skin Passport.
@@ -192,6 +248,8 @@ Lab reading when available. It does not ingest Channel3 products itself.
 - **Skin analysis and virtual try-on:** YouCam APIs.
 - **Optional profile prose:** OpenAI, for the style-profile summary only.
 - **Image processing:** Sharp.
+- **Face detection for skin-analysis framing:** TensorFlow.js Node and
+  BlazeFace, running on the server.
 - **Catalog of record inside Vestige:** `Garment` in `prisma/schema.prisma`.
   Channel3 is an ingestion/search source, not a second Vestige database.
 - **Skin-analysis source of truth:** the fresh `skinSummary` and
@@ -203,7 +261,14 @@ Lab reading when available. It does not ingest Channel3 products itself.
 Relevant code:
 
 - `src/app/api/skin-analysis/route.ts` — validates, normalizes, analyzes, and
-  stores the session photo and analysis.
+  stores the full-frame session photo and fresh analysis; sends a temporary
+  detected-face crop to YouCam.
+- `src/lib/youcam/face-crop.ts` — loads BlazeFace, detects the largest face,
+  and produces the temporary image passed to skin analysis.
+- `src/lib/youcam/skin-analysis.ts` — submits YouCam skin and skin-tone tasks
+  and converts their responses into the session summary.
+- `src/lib/youcam/vto.ts` — uploads the full-frame user photo and selected
+  garment to YouCam's one-garment virtual try-on task.
 - `src/lib/skin-analysis-history.ts` — reads valid fresh session analyses.
 - `src/lib/skin-trends.ts` — shared concern comparison and trajectory
   calculations.
@@ -283,7 +348,10 @@ it does not substitute generated mock products.
 | `npm run db:push` | Push the Prisma schema to the configured database. |
 | `npm run db:seed` | Seed the demo account and sample history. |
 | `npm run db:studio` | Open Prisma Studio. |
-| `node --import tsx --test src/lib/skin-trends.test.ts src/lib/collaborative-filter.test.ts` | Run focused trajectory and ranking tests. |
+| `node --import tsx --test src/lib/color-science.test.ts src/lib/skin-trends.test.ts src/lib/collaborative-filter.test.ts src/lib/style-evolution.test.ts` | Run the unit tests for color scoring, skin trends, collaborative ranking, and style evolution. |
+
+There is currently no `npm test` script. `npm run lint` may prompt for an
+initial ESLint configuration if none has been created in the checkout.
 
 The seed script is demo data, not a live catalog import. It creates mock
 recommendations and sample session history for its demo account; seeded legacy
@@ -331,12 +399,15 @@ NextAuth sign-in endpoints are public.
 
 ## Data and privacy notes
 
-- Session photos are normalized and stored as data URLs in the SQLite-backed
-  session record. Raw analysis responses and structured summaries are also
-  stored per session. This prototype does not use a separate object-storage
-  service.
-- Session photos are sent to YouCam for fresh skin analysis. During try-on,
-  the session portrait and selected garment are sent to YouCam for rendering.
+- The normalized full-frame session photo is stored as a data URL in the
+  SQLite-backed session record. The temporary face crop is used for the
+  analysis request and is not saved as the session photo. Raw analysis
+  responses and structured summaries are stored per session. This prototype
+  does not use a separate object-storage service.
+- The face crop is sent to YouCam for fresh skin analysis. During try-on, the
+  full-frame session portrait and selected garment are sent to YouCam for
+  rendering. The garment image and rendered result may also be stored on the
+  session or a user-owned garment record.
 - Channel3 receives apparel-search text that includes the selected intention
   and category, plus in-stock/gender filters. It does not receive the user's
   photo, name, account ID, skin analysis, or saved preferences.
