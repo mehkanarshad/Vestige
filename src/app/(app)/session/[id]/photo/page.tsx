@@ -8,6 +8,59 @@ import { useSessionStore } from "@/lib/session-store";
 import { StepIndicator } from "@/components/session/step-indicator";
 import { Spinner } from "@/components/ui/spinner";
 
+const MAX_IMAGE_DIMENSION = 1920;
+const TARGET_UPLOAD_SIZE = 2 * 1024 * 1024;
+
+async function compressPhoto(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(
+      1,
+      MAX_IMAGE_DIMENSION / bitmap.width,
+      MAX_IMAGE_DIMENSION / bitmap.height
+    );
+    let width = Math.round(bitmap.width * scale);
+    let height = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Your browser could not prepare this photo.");
+
+    const encode = (quality: number) => new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("Could not compress this photo.")),
+        "image/jpeg",
+        quality
+      );
+    });
+
+    let blob: Blob | null = null;
+    for (const quality of [0.84, 0.8, 0.76, 0.72]) {
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(bitmap, 0, 0, width, height);
+      blob = await encode(quality);
+      if (blob.size <= TARGET_UPLOAD_SIZE) break;
+    }
+
+    // If a detailed image is still large at a lower JPEG quality, reduce its
+    // dimensions gradually while keeping the face and upper body legible.
+    while (blob && blob.size > TARGET_UPLOAD_SIZE && Math.min(width, height) > 1024) {
+      width = Math.round(width * 0.85);
+      height = Math.round(height * 0.85);
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(bitmap, 0, 0, width, height);
+      blob = await encode(0.8);
+    }
+
+    if (!blob) throw new Error("Could not compress this photo.");
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "photo";
+    return new File([blob], `${baseName}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export default function PhotoStep() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -51,6 +104,8 @@ export default function PhotoStep() {
     setError("");
 
     try {
+      const analysisPhoto = await compressPhoto(localFile);
+
       // Ensure we have a session ID
       let sessionId = id;
       if (!sessionId || sessionId === "new") {
@@ -61,7 +116,7 @@ export default function PhotoStep() {
       }
 
       const fd = new FormData();
-      fd.append("photo", localFile);
+      fd.append("photo", analysisPhoto);
       fd.append("sessionId", sessionId);
 
       const res = await fetch("/api/skin-analysis", {
