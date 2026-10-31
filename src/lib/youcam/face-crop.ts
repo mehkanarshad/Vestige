@@ -1,4 +1,4 @@
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import sharp from "sharp";
 
@@ -36,7 +36,12 @@ export async function cropFaceForSkinAnalysis(source: Buffer): Promise<Buffer> {
     throw new Error("Could not read the uploaded photo dimensions.");
   }
 
-  const pixels = tf.node.decodeJpeg(normalized, 3);
+  const { data, info } = await sharp(normalized)
+    .toColourspace("srgb")
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const pixels = tf.tensor3d(new Uint8Array(data), [info.height, info.width, info.channels]);
   try {
     const predictions = await model.estimateFaces(pixels, false);
     if (!predictions.length) {

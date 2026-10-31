@@ -13,7 +13,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: ["@prisma/client", "@tensorflow/tfjs-node"],
+  serverExternalPackages: [
+    "@prisma/client",
+    "@tensorflow/tfjs",
+    "@tensorflow-models/blazeface",
+  ],
 };
 
 export default nextConfig;
